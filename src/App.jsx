@@ -11,15 +11,22 @@ import {
   Crosshair, Upload, Pencil, Check
 } from 'lucide-react';
 
-const bounds = [[0, 0], [1000, 1600]];
+// New map image dimensions
+const MAP_WIDTH = 5944;
+const MAP_HEIGHT = 8075;
+
+const bounds = [
+  [0, 0],
+  [MAP_HEIGHT, MAP_WIDTH]
+];
 
 const blank = {
   title: '',
   description: '',
   category: 'Other',
   image_url: '',
-  x: 800,
-  y: 500
+  x: MAP_WIDTH / 2,
+  y: MAP_HEIGHT / 2
 };
 
 const iconFor = (color) => L.divIcon({
@@ -165,7 +172,6 @@ function App() {
   const setField = (key, value) =>
     setDraft(d => ({ ...d, [key]: value }));
 
-  // Select a location on the map before pressing Add Pin.
   const pickLocation = (position) => {
     setSelectedPosition(position);
     setNotice(
@@ -266,7 +272,6 @@ function App() {
   const movePin = async (pin, position) => {
     if (!isAdmin || !configured) return;
 
-    // Save the new image-map coordinates, not screen pixels.
     const { error } = await supabase
       .from('pins')
       .update({ x: position.lng, y: position.lat })
@@ -329,7 +334,6 @@ function App() {
     setNotice('Image uploaded.');
   };
 
-  // Category management
   const addCategory = async (e) => {
     e.preventDefault();
     const name = newCategory.trim();
@@ -376,7 +380,6 @@ function App() {
       return;
     }
 
-    // Update existing pins first so they retain their category.
     const { error: pinError } = await supabase
       .from('pins')
       .update({ category: name })
@@ -697,10 +700,13 @@ function App() {
             <MapContainer
               crs={L.CRS.Simple}
               bounds={bounds}
-              minZoom={-2}
+              minZoom={-3}
               maxZoom={3}
-              zoom={-1}
-              maxBounds={[[-100, -100], [1100, 1700]]}
+              zoom={-2}
+              maxBounds={[
+                [-100, -100],
+                [MAP_HEIGHT + 100, MAP_WIDTH + 100]
+              ]}
               maxBoundsViscosity={0.8}
               zoomControl={true}
               attributionControl={false}
