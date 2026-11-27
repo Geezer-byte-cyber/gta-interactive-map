@@ -80,7 +80,7 @@ function App() {
   const [categoryManager, setCategoryManager] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryName, setCategoryName] = useState('');
-  const [categoryColor, setCategoryColor] = useState('#58a6ff');
+  const [editingColor, setEditingColor] = useState('#58a6ff');
 
   const [mapUrl] = useState('/los-santos-map.jpg');
 
@@ -358,7 +358,7 @@ function App() {
   const beginCategoryEdit = (c) => {
     setEditingCategory(c.id);
     setCategoryName(c.name);
-    setCategoryColor(c.color);
+    setEditingColor(c.color);
   };
 
   const saveCategoryEdit = async (id, oldName) => {
@@ -389,7 +389,7 @@ function App() {
 
     const { error } = await supabase
       .from('map_categories')
-      .update({ name, color: categoryColor })
+      .update({ name, color: editingColor })
       .eq('id', id);
 
     if (error) {
@@ -579,8 +579,8 @@ function App() {
                             Colour
                             <input
                               type="color"
-                              value={categoryColor}
-                              onChange={e => setCategoryColor(e.target.value)}
+                              value={editingColor}
+                              onChange={e => setEditingColor(e.target.value)}
                             />
                           </label>
                           <div style={{ display: 'flex', gap: 6 }}>
