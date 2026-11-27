@@ -5,10 +5,11 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase, configured } from './supabase';
+import AdminPanel from './AdminPanel';
 import {
   Search, Plus, LogOut, X, Save, Trash2,
   Image as ImageIcon, MapPin, SlidersHorizontal,
-  Crosshair, Upload, Pencil, Check, LockKeyhole
+  Crosshair, Upload, Pencil, Check, LockKeyhole, Users
 } from 'lucide-react';
 
 const MAP_WIDTH = 5944;
@@ -84,6 +85,9 @@ function App() {
   const [categoryName, setCategoryName] = useState('');
   const [editingColor, setEditingColor] = useState('#ff8a24');
 
+  // Admin Panel is closed by default.
+  const [adminOpen, setAdminOpen] = useState(false);
+
   const [mapUrl] = useState('/los-santos-map.jpg');
 
   const isOwner = profile?.role === 'owner';
@@ -147,6 +151,7 @@ function App() {
         setSession(newSession);
         setProfile(null);
         setPermissions([]);
+        setAdminOpen(false);
       });
 
     return () => {
@@ -164,6 +169,7 @@ function App() {
         setPermissions([]);
         setPins([]);
         setCategories([]);
+        setAdminOpen(false);
         return;
       }
 
@@ -212,6 +218,11 @@ function App() {
       setProfile(profileData);
       setPermissions(permissionRows);
       setCategories(categoryData || []);
+
+      // Never leave the Admin Panel open for a non-owner.
+      if (profileData.role !== 'owner') {
+        setAdminOpen(false);
+      }
 
       const { data: pinData, error: pinError } = await supabase
         .from('pins')
@@ -388,6 +399,7 @@ function App() {
   };
 
   const logout = async () => {
+    setAdminOpen(false);
     await supabase.auth.signOut();
     setProfile(null);
     setPermissions([]);
@@ -748,6 +760,17 @@ function App() {
           <span style={{ color: '#ffad66', fontSize: 11 }}>
             {isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`}
           </span>
+
+          {/* Only the owner is shown this button. */}
+          {isOwner && (
+            <button
+              className="outline-btn"
+              onClick={() => setAdminOpen(true)}
+            >
+              <Users size={16}/> Admin Panel
+            </button>
+          )}
+
           <button className="outline-btn" onClick={logout}>
             <LogOut size={16}/> Sign out
           </button>
@@ -1091,6 +1114,11 @@ function App() {
           {notice}
           <button onClick={() => setNotice('')}><X size={14}/></button>
         </div>
+      )}
+
+      {/* The Admin Panel is rendered only when the signed-in profile is the owner. */}
+      {isOwner && adminOpen && (
+        <AdminPanel onClose={() => setAdminOpen(false)} />
       )}
 
       {editing !== null && (
