@@ -9,28 +9,27 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-const response = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
+function respond(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
     status,
     headers: {
       ...corsHeaders,
       "Content-Type": "application/json",
     },
   });
+}
 
-const fail = (message: string, status = 400) =>
-  response({ error: message }, status);
+function fail(message: string, status = 400) {
+  return respond({ error: message }, status);
+}
 
-const usernameIsValid = (username: string) =>
-  /^[a-z0-9_]{3,24}$/.test(username);
+function validUsername(username: string) {
+  return /^[a-z0-9_]{3,24}$/.test(username);
+}
 
 Deno.serve(async (req) => {
-  // Browser CORS preflight must succeed before any authentication.
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
@@ -43,11 +42,18 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!url || !anonKey || !serviceKey) {
-      console.error("Missing required Supabase function secrets");
+      console.error("Missing required function secrets");
       return fail("Server configuration is incomplete", 500);
     }
 
-    const body = await req.json();
+    let body: Record<string, unknown>;
+
+    try {
+      body = await req.json();
+    } catch {
+      return fail("Invalid request body");
+    }
+
     const action = String(body.action || "");
 
     const admin = createClient(url, serviceKey, {
@@ -62,7 +68,7 @@ Deno.serve(async (req) => {
       const username = String(body.username || "").trim().toLowerCase();
       const password = String(body.password || "");
 
-      if (!usernameIsValid(username) || !password) {
+      if (!validUsername(username) || !password) {
         return fail("Invalid username or password", 401);
       }
 
@@ -73,7 +79,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (profileError || !profile) {
-        console.error("Username lookup failed:", profileError);
+        console.error("Username lookup failed:", profileError?.message);
         return fail("Invalid username or password", 401);
       }
 
@@ -83,7 +89,7 @@ Deno.serve(async (req) => {
       const email = authUser?.user?.email;
 
       if (authUserError || !email) {
-        console.error("Auth user lookup failed:", authUserError);
+        console.error("Auth user lookup failed:", authUserError?.message);
         return fail("Invalid username or password", 401);
       }
 
@@ -95,45 +101,42 @@ Deno.serve(async (req) => {
       });
 
       const { data: loginData, error: loginError } =
-        await loginClient.auth.signInWithPassword({
-          email,
-          password,
-        });
+        await loginClient.auth.signInWithPassword({ email, password });
 
       if (loginError || !loginData.session) {
         console.error("Login failed:", loginError?.message);
         return fail("Invalid username or password", 401);
       }
 
-      return response({
+      return respond({
         success: true,
         session: loginData.session,
       });
     }
 
-    // ALL OTHER ACTIONS REQUIRE AN AUTHENTICATED OWNER
-    const authorization = req.headers.get("Authorization");
+    // ALL ADMIN ACTIONS REQUIRE A VALID OWNER SESSION
+    const authorization = req.headers.get("Authorization") || "";
+    const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
 
-    if (!authorization) {
+    if (!tokenMatch) {
       return fail("Not authorised", 401);
     }
+
+    const accessToken = tokenMatch[1];
 
     const userClient = createClient(url, anonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
       },
-      global: {
-        headers: {
-          Authorization: authorization,
-        },
-      },
     });
 
+    // IMPORTANT: explicitly pass the incoming access token
     const { data: authData, error: authError } =
-      await userClient.auth.getUser();
+      await userClient.auth.getUser(accessToken);
 
     if (authError || !authData.user) {
+      console.error("Token verification failed:", authError?.message);
       return fail("Not authorised", 401);
     }
 
@@ -143,16 +146,21 @@ Deno.serve(async (req) => {
       .eq("user_id", authData.user.id)
       .maybeSingle();
 
-    if (ownerError || ownerProfile?.role !== "owner") {
+    if (ownerError) {
+      console.error("Owner lookup failed:", ownerError.message);
+      return fail("Could not verify account permissions", 500);
+    }
+
+    if (ownerProfile?.role !== "owner") {
       return fail("Only the owner can perform this action", 403);
     }
 
-    // CREATE A USER
+    // CREATE USER
     if (action === "create") {
       const username = String(body.username || "").trim().toLowerCase();
       const password = String(body.password || "");
 
-      if (!usernameIsValid(username)) {
+      if (!validUsername(username)) {
         return fail(
           "Username must be 3–24 characters: letters, numbers or underscores"
         );
@@ -175,7 +183,7 @@ Deno.serve(async (req) => {
         return fail(createError?.message || "Could not create account");
       }
 
-      const { error: profileInsertError } = await admin
+      const { error: profileError } = await admin
         .from("user_profiles")
         .insert({
           user_id: created.user.id,
@@ -183,15 +191,12 @@ Deno.serve(async (req) => {
           role: "user",
         });
 
-      if (profileInsertError) {
+      if (profileError) {
         await admin.auth.admin.deleteUser(created.user.id);
-        return fail(profileInsertError.message);
+        return fail(profileError.message);
       }
 
-      return response({
-        success: true,
-        userId: created.user.id,
-      });
+      return respond({ success: true, userId: created.user.id });
     }
 
     // LIST USERS, CATEGORIES AND PERMISSIONS
@@ -212,15 +217,18 @@ Deno.serve(async (req) => {
         ]);
 
       if (profilesResult.error) {
-        return fail(profilesResult.error.message, 500);
+        console.error("Profiles query failed:", profilesResult.error.message);
+        return fail("Could not load users", 500);
       }
 
       if (categoriesResult.error) {
-        return fail(categoriesResult.error.message, 500);
+        console.error("Categories query failed:", categoriesResult.error.message);
+        return fail("Could not load categories", 500);
       }
 
       if (permissionsResult.error) {
-        return fail(permissionsResult.error.message, 500);
+        console.error("Permissions query failed:", permissionsResult.error.message);
+        return fail("Could not load permissions", 500);
       }
 
       const users = (profilesResult.data || []).map((profile) => ({
@@ -245,23 +253,21 @@ Deno.serve(async (req) => {
         }),
       }));
 
-      return response({
+      return respond({
         success: true,
         users,
         categories: categoriesResult.data || [],
       });
     }
 
-    // REPLACE A USER'S CATEGORY PERMISSIONS
+    // UPDATE CATEGORY PERMISSIONS
     if (action === "updatePermissions") {
       const userId = String(body.userId || "");
       const permissions = Array.isArray(body.permissions)
-        ? body.permissions
+        ? body.permissions as Array<Record<string, unknown>>
         : [];
 
-      if (!userId) {
-        return fail("Missing user ID");
-      }
+      if (!userId) return fail("Missing user ID");
 
       const { data: target, error: targetError } = await admin
         .from("user_profiles")
@@ -282,14 +288,16 @@ Deno.serve(async (req) => {
         .select("id");
 
       if (categoriesError) {
-        return fail(categoriesError.message, 500);
+        return fail("Could not load categories", 500);
       }
 
       const validIds = new Set((categories || []).map((c) => c.id));
       const rows = [];
 
       for (const item of permissions) {
-        if (!validIds.has(item.categoryId)) {
+        const categoryId = String(item.categoryId || "");
+
+        if (!validIds.has(categoryId)) {
           return fail("One of the selected categories is invalid");
         }
 
@@ -299,15 +307,13 @@ Deno.serve(async (req) => {
         const canDelete = item.canDelete === true;
 
         if ((canAdd || canEdit || canDelete) && !canView) {
-          return fail(
-            "Add, edit and delete permissions require view permission"
-          );
+          return fail("Add, edit and delete permissions require view permission");
         }
 
         if (canView) {
           rows.push({
             user_id: userId,
-            category_id: item.categoryId,
+            category_id: categoryId,
             can_add: canAdd,
             can_edit: canEdit,
             can_delete: canDelete,
@@ -321,7 +327,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId);
 
       if (deleteError) {
-        return fail(deleteError.message, 500);
+        return fail("Could not update existing permissions", 500);
       }
 
       if (rows.length) {
@@ -330,29 +336,31 @@ Deno.serve(async (req) => {
           .insert(rows);
 
         if (insertError) {
-          return fail(insertError.message, 500);
+          return fail("Could not save permissions", 500);
         }
       }
 
-      return response({ success: true });
+      return respond({ success: true });
     }
 
-    // CHANGE A USER'S PASSWORD
+    // CHANGE USER PASSWORD
     if (action === "updatePassword") {
       const userId = String(body.userId || "");
       const password = String(body.password || "");
+
+      if (!userId) return fail("Missing user ID");
 
       if (password.length < 10) {
         return fail("Password must be at least 10 characters");
       }
 
-      const { data: target } = await admin
+      const { data: target, error: targetError } = await admin
         .from("user_profiles")
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (!target) {
+      if (targetError || !target) {
         return fail("User not found", 404);
       }
 
@@ -364,14 +372,12 @@ Deno.serve(async (req) => {
         password,
       });
 
-      if (error) {
-        return fail(error.message);
-      }
+      if (error) return fail(error.message);
 
-      return response({ success: true });
+      return respond({ success: true });
     }
 
-    // DELETE A USER
+    // DELETE USER
     if (action === "delete") {
       const userId = String(body.userId || "");
 
@@ -379,13 +385,13 @@ Deno.serve(async (req) => {
         return fail("You cannot delete your own owner account");
       }
 
-      const { data: target } = await admin
+      const { data: target, error: targetError } = await admin
         .from("user_profiles")
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (!target) {
+      if (targetError || !target) {
         return fail("User not found", 404);
       }
 
@@ -395,16 +401,18 @@ Deno.serve(async (req) => {
 
       const { error } = await admin.auth.admin.deleteUser(userId);
 
-      if (error) {
-        return fail(error.message);
-      }
+      if (error) return fail(error.message);
 
-      return response({ success: true });
+      return respond({ success: true });
     }
 
     return fail("Unknown action");
   } catch (error) {
-    console.error("manage-users error:", error);
+    console.error(
+      "manage-users unexpected error:",
+      error instanceof Error ? error.message : String(error)
+    );
+
     return fail("An unexpected server error occurred", 500);
   }
 });
