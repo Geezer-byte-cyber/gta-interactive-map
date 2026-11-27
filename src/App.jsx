@@ -6,18 +6,15 @@ import {
 import L from 'leaflet';
 import { supabase, configured } from './supabase';
 import {
-  Search, Plus, LogIn, LogOut, X, Save, Trash2,
+  Search, Plus, LogOut, X, Save, Trash2,
   Image as ImageIcon, MapPin, SlidersHorizontal,
-  Crosshair, Upload, Pencil, Check
+  Crosshair, Upload, Pencil, Check, LockKeyhole
 } from 'lucide-react';
 
 const MAP_WIDTH = 5944;
 const MAP_HEIGHT = 8075;
 
-const bounds = [
-  [0, 0],
-  [MAP_HEIGHT, MAP_WIDTH]
-];
+const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
 
 const blank = {
   title: '',
@@ -46,9 +43,7 @@ const previewIcon = L.divIcon({
 function ClickCapture({ active, onPick }) {
   useMapEvents({
     click(e) {
-      if (active) {
-        onPick({ x: e.latlng.lng, y: e.latlng.lat });
-      }
+      if (active) onPick({ x: e.latlng.lng, y: e.latlng.lat });
     }
   });
   return null;
@@ -66,18 +61,19 @@ function App() {
   const [pins, setPins] = useState([]);
   const [categories, setCategories] = useState([]);
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-
-  const [adminOpen, setAdminOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(blank);
-
   const [selectedPosition, setSelectedPosition] = useState(null);
-  const [placing, setPlacing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -90,30 +86,189 @@ function App() {
 
   const [mapUrl] = useState('/los-santos-map.jpg');
 
-  const isAdmin = !!session;
+  const isOwner = profile?.role === 'owner';
+  const isSignedIn = !!session && !!profile;
+
+  const permissionFor = (categoryName) =>
+    permissions.find(p => p.category_name === categoryName);
+
+  const canView = (categoryName) =>
+    isOwner || !!permissionFor(categoryName);
+
+  const canAdd = (categoryName) =>
+    isOwner || permissionFor(categoryName)?.can_add === true;
+
+  const canEdit = (categoryName) =>
+    isOwner || permissionFor(categoryName)?.can_edit === true;
+
+  const canDelete = (categoryName) =>
+    isOwner || permissionFor(categoryName)?.can_delete === true;
+
+  const visibleCategories = useMemo(
+    () => categories.filter(c =>
+      profile?.role === 'owner' ||
+      permissions.some(p => p.category_id === c.id)
+    ),
+    [categories, permissions, profile]
+  );
+
+  const visiblePins = useMemo(
+    () => pins.filter(p => canView(p.category)),
+    [pins, permissions, profile]
+  );
 
   const filtered = useMemo(() =>
-    pins.filter(p =>
+    visiblePins.filter(p =>
       (category === 'All' || p.category === category) &&
-      `${p.title} ${p.description} ${p.category}`
+      `${p.title} ${p.description || ''} ${p.category}`
         .toLowerCase().includes(query.toLowerCase())
-    ), [pins, category, query]);
+    ),
+    [visiblePins, category, query]
+  );
 
   useEffect(() => {
     if (!configured) {
-      setNotice('Connect Supabase to enable shared pins and admin login.');
+      setNotice('Supabase is not configured. Please check your website settings.');
+      setAuthLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let alive = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!alive) return;
+      if (error) setNotice(error.message);
+      setSession(data?.session || null);
+      setAuthLoading(false);
     });
 
     const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+      supabase.auth.onAuthStateChange((_event, newSession) => {
+        setSession(newSession);
+        setProfile(null);
+        setPermissions([]);
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      alive = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadAccess = async () => {
+      if (!session?.user?.id) {
+        setProfile(null);
+        setPermissions([]);
+        setPins([]);
+        setCategories([]);
+        return;
+      }
+
+      const [{ data: profileData, error: profileError },
+        { data: permissionData, error: permissionError }] =
+        await Promise.all([
+          supabase.from('user_profiles')
+            .select('user_id, username, role')
+            .eq('user_id', session.user.id)
+            .maybeSingle(),
+          supabase.from('user_category_permissions')
+            .select('category_id, can_add, can_edit, can_delete')
+            .eq('user_id', session.user.id)
+        ]);
+
+      if (!alive) return;
+
+      if (profileError || !profileData) {
+        setNotice(profileError?.message || 'Your user profile could not be found.');
+        await supabase.auth.signOut();
+        return;
+      }
+
+      if (permissionError) {
+        setNotice(permissionError.message);
+        return;
+      }
+
+      const { data: categoryData, error: categoryError } =
+        await supabase.from('map_categories')
+          .select('*')
+          .order('name');
+
+      if (!alive) return;
+
+      if (categoryError) {
+        setNotice(categoryError.message);
+        return;
+      }
+
+      const permissionRows = (permissionData || []).map(p => ({
+        ...p,
+        category_name: categoryData?.find(c => c.id === p.category_id)?.name
+      }));
+
+      setProfile(profileData);
+      setPermissions(permissionRows);
+      setCategories(categoryData || []);
+
+      const { data: pinData, error: pinError } = await supabase
+        .from('pins')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!alive) return;
+
+      if (pinError) setNotice(pinError.message);
+      else setPins(pinData || []);
+    };
+
+    loadAccess();
+
+    return () => {
+      alive = false;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    const pinsChannel = supabase
+      .channel('knox-pins')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'pins'
+      }, async () => {
+        const { data, error } = await supabase
+          .from('pins')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error) setPins(data || []);
+      })
+      .subscribe();
+
+    const categoriesChannel = supabase
+      .channel('knox-categories')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'map_categories'
+      }, async () => {
+        const { data, error } = await supabase
+          .from('map_categories')
+          .select('*')
+          .order('name');
+        if (!error) setCategories(data || []);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(pinsChannel);
+      supabase.removeChannel(categoriesChannel);
+    };
+  }, [isSignedIn]);
 
   const loadPins = async () => {
     const { data, error } = await supabase
@@ -135,36 +290,6 @@ function App() {
     else setCategories(data || []);
   };
 
-  useEffect(() => {
-    if (!configured) return;
-
-    loadPins();
-    loadCategories();
-
-    const pinsChannel = supabase
-      .channel('public-pins')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'pins'
-      }, loadPins)
-      .subscribe();
-
-    const categoriesChannel = supabase
-      .channel('public-categories')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'map_categories'
-      }, loadCategories)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(pinsChannel);
-      supabase.removeChannel(categoriesChannel);
-    };
-  }, [session]);
-
   const categoryColor = (name) =>
     categories.find(c => c.name === name)?.color || '#ff8a24';
 
@@ -179,6 +304,13 @@ function App() {
   };
 
   const startNew = () => {
+    const firstAllowed = visibleCategories.find(c => canAdd(c.name));
+
+    if (!firstAllowed) {
+      setNotice('You do not have permission to add pins in any category.');
+      return;
+    }
+
     if (!selectedPosition) {
       setNotice('Click somewhere on the map first to choose a pin location.');
       return;
@@ -188,47 +320,88 @@ function App() {
       ...blank,
       x: selectedPosition.x,
       y: selectedPosition.y,
-      category: categories[0]?.name || 'Other'
+      category: firstAllowed.name
     });
 
     setEditing('new');
-    setPlacing(false);
   };
 
-  const editPin = (p) => {
-    setDraft({ ...p });
-    setEditing(p.id);
-    setPlacing(false);
+  const editPin = (pin) => {
+    if (!canEdit(pin.category) && !canDelete(pin.category)) {
+      setNotice('You do not have permission to edit this pin.');
+      return;
+    }
+
+    setDraft({ ...pin });
+    setEditing(pin.id);
   };
 
-  const closeEditor = () => {
-    setEditing(null);
-  };
+  const closeEditor = () => setEditing(null);
 
   const login = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+
+    if (!configured || loginLoading) return;
+
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!cleanUsername || !password) {
+      setNotice('Enter your username and password.');
+      return;
+    }
+
+    setLoginLoading(true);
+    setNotice('');
+
+    const { data, error } = await supabase.functions.invoke(
+      'manage-users',
+      {
+        body: {
+          action: 'login',
+          username: cleanUsername,
+          password
+        }
+      }
+    );
+
+    if (error || !data?.session) {
+      setNotice(data?.error || error?.message || 'Login failed. Check your username and password.');
+      setLoginLoading(false);
+      return;
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token
     });
 
-    setNotice(error ? error.message : 'Signed in.');
-    if (!error) {
-      setPassword('');
-      setAdminOpen(false);
+    setLoginLoading(false);
+
+    if (sessionError) {
+      setNotice(sessionError.message);
+      return;
     }
+
+    setUsername('');
+    setPassword('');
+    setNotice('Welcome to The Knox Map.');
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setNotice('Signed out.');
+    setProfile(null);
+    setPermissions([]);
+    setPins([]);
+    setCategories([]);
     setSelectedPosition(null);
-    setPlacing(false);
+    setEditing(null);
+    setNotice('Signed out.');
   };
 
   const save = async (e) => {
     e.preventDefault();
-    if (!configured || !isAdmin) return;
+
+    if (!configured || !isSignedIn) return;
 
     if (!draft.title.trim()) {
       setNotice('Please enter a pin title.');
@@ -238,6 +411,20 @@ function App() {
     if (!categories.some(c => c.name === draft.category)) {
       setNotice('Please select a valid category.');
       return;
+    }
+
+    if (editing === 'new' && !canAdd(draft.category)) {
+      setNotice('You do not have permission to add pins in this category.');
+      return;
+    }
+
+    if (editing !== 'new') {
+      const original = pins.find(p => p.id === editing);
+
+      if (!original || !canEdit(original.category) || !canEdit(draft.category)) {
+        setNotice('You do not have permission to edit this pin or move it to that category.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -269,7 +456,10 @@ function App() {
   };
 
   const movePin = async (pin, position) => {
-    if (!isAdmin || !configured) return;
+    if (!canEdit(pin.category)) {
+      setNotice('You do not have permission to move this pin.');
+      return;
+    }
 
     const { error } = await supabase
       .from('pins')
@@ -293,6 +483,13 @@ function App() {
   };
 
   const remove = async () => {
+    const pin = pins.find(p => p.id === editing);
+
+    if (!pin || !canDelete(pin.category)) {
+      setNotice('You do not have permission to delete this pin.');
+      return;
+    }
+
     if (!window.confirm('Delete this pin?')) return;
 
     const { error } = await supabase
@@ -311,7 +508,10 @@ function App() {
   };
 
   const upload = async (file) => {
-    if (!file || !configured || !isAdmin) return;
+    if (!file || !configured || !isOwner) {
+      setNotice('Image uploads are currently restricted to the owner account.');
+      return;
+    }
 
     const ext = file.name.split('.').pop().toLowerCase();
     const path = `${crypto.randomUUID()}.${ext}`;
@@ -335,8 +535,9 @@ function App() {
 
   const addCategory = async (e) => {
     e.preventDefault();
-    const name = newCategory.trim();
+    if (!isOwner) return;
 
+    const name = newCategory.trim();
     if (!name) return;
 
     if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
@@ -365,6 +566,8 @@ function App() {
   };
 
   const saveCategoryEdit = async (id, oldName) => {
+    if (!isOwner) return;
+
     const name = categoryName.trim();
 
     if (!name) {
@@ -409,6 +612,8 @@ function App() {
   };
 
   const deleteCategory = async (c) => {
+    if (!isOwner) return;
+
     const used = pins.some(p => p.category === c.name);
 
     if (used) {
@@ -433,6 +638,100 @@ function App() {
     await loadCategories();
   };
 
+  if (!configured) {
+    return (
+      <div className="app-shell">
+        <div className="auth-modal modal" style={{ margin: '12vh auto', maxWidth: 440 }}>
+          <div className="brand-mark">K</div>
+          <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
+          <h1>THE KNOX MAP</h1>
+          <p>Supabase is not configured. Please check the website environment settings.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authLoading || (session && !profile)) {
+    return (
+      <div className="app-shell">
+        <div className="auth-modal modal" style={{ margin: '12vh auto', maxWidth: 440, textAlign: 'center' }}>
+          <div className="brand-mark" style={{ margin: '0 auto 15px' }}>K</div>
+          <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
+          <h1>THE KNOX MAP</h1>
+          <p>Preparing your map access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !profile) {
+    return (
+      <div className="app-shell">
+        <div className="auth-modal modal" style={{
+          margin: '10vh auto',
+          maxWidth: 440,
+          padding: 30,
+          textAlign: 'left'
+        }}>
+          <div className="brand" style={{ marginBottom: 28 }}>
+            <div className="brand-mark">K</div>
+            <div>
+              <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
+              <h1>THE KNOX MAP</h1>
+            </div>
+          </div>
+
+          <div className="eyebrow">RESTRICTED COMMUNITY ACCESS</div>
+          <h2 style={{ marginTop: 8 }}>Welcome back.</h2>
+          <p>Sign in with the username and password provided by the map owner.</p>
+
+          <form onSubmit={login}>
+            <label>
+              Username
+              <input
+                autoComplete="username"
+                required
+                maxLength={24}
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Enter your username"
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </label>
+
+            <button className="primary wide" disabled={loginLoading}>
+              <LockKeyhole size={16}/>
+              {loginLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+
+          <div className="sidebar-foot" style={{ marginTop: 25 }}>
+            LOS SANTOS • BLAINE COUNTY<br/>
+            <span>Unofficial fan-made community project</span>
+          </div>
+
+          {notice && (
+            <div className="toast" role="status" style={{ position: 'static', marginTop: 15 }}>
+              {notice}
+              <button onClick={() => setNotice('')}><X size={14}/></button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -446,14 +745,12 @@ function App() {
 
         <div className="top-actions">
           <span className="live-dot">MAP ONLINE</span>
-          <button className="outline-btn" onClick={() => setAdminOpen(true)}>
-            {isAdmin ? <><LogOut size={16}/> Admin</> : <><LogIn size={16}/> Admin login</>}
+          <span style={{ color: '#ffad66', fontSize: 11 }}>
+            {isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`}
+          </span>
+          <button className="outline-btn" onClick={logout}>
+            <LogOut size={16}/> Sign out
           </button>
-          {isAdmin && (
-            <button className="icon-btn" title="Sign out" onClick={logout}>
-              <LogOut size={17}/>
-            </button>
-          )}
         </div>
       </header>
 
@@ -489,10 +786,10 @@ function App() {
               onClick={() => setCategory('All')}
             >
               <span className="swatch all"/>All locations
-              <b>{pins.length}</b>
+              <b>{visiblePins.length}</b>
             </button>
 
-            {categories.map(c => (
+            {visibleCategories.map(c => (
               <button
                 key={c.id}
                 className={category === c.name ? 'cat active' : 'cat'}
@@ -500,12 +797,12 @@ function App() {
               >
                 <span className="swatch" style={{ background: c.color }}/>
                 {c.name}
-                <b>{pins.filter(p => p.category === c.name).length}</b>
+                <b>{visiblePins.filter(p => p.category === c.name).length}</b>
               </button>
             ))}
           </div>
 
-          {isAdmin && (
+          {isOwner && (
             <div style={{
               marginTop: 22, paddingTop: 15,
               borderTop: '1px solid #30251d'
@@ -534,11 +831,6 @@ function App() {
                       placeholder="Category name"
                       maxLength={40}
                       required
-                      style={{
-                        width: '100%', padding: 9, background: '#211710',
-                        color: '#fff', border: '1px solid #49301e',
-                        borderRadius: 4
-                      }}
                     />
                     <label style={{
                       display: 'flex', alignItems: 'center',
@@ -569,10 +861,6 @@ function App() {
                             value={categoryName}
                             onChange={e => setCategoryName(e.target.value)}
                             maxLength={40}
-                            style={{
-                              padding: 7, background: '#211710',
-                              color: '#fff', border: '1px solid #49301e'
-                            }}
                           />
                           <label style={{
                             display: 'flex', alignItems: 'center',
@@ -645,7 +933,13 @@ function App() {
               <button
                 className="pin-row"
                 key={p.id}
-                onClick={() => editPin(p)}
+                onClick={() => {
+                  if (canEdit(p.category) || canDelete(p.category)) {
+                    editPin(p);
+                  } else {
+                    setNotice(`${p.title} — ${p.description || p.category}`);
+                  }
+                }}
               >
                 <span
                   className="pin-dot"
@@ -676,13 +970,13 @@ function App() {
             </div>
 
             <div className="map-tools">
-              {isAdmin && (
+              {(isOwner || visibleCategories.some(c => canAdd(c.name))) && (
                 <span style={{ fontSize: 10, color: '#ffad66' }}>
                   {selectedPosition ? 'LOCATION SELECTED' : 'CLICK MAP TO SELECT'}
                 </span>
               )}
 
-              {isAdmin && (
+              {(isOwner || visibleCategories.some(c => canAdd(c.name))) && (
                 <button
                   className="add-btn"
                   onClick={startNew}
@@ -714,11 +1008,11 @@ function App() {
               <MapImage src={mapUrl}/>
 
               <ClickCapture
-                active={isAdmin}
+                active={isOwner || visibleCategories.some(c => canAdd(c.name))}
                 onPick={pickLocation}
               />
 
-              {selectedPosition && isAdmin && (
+              {selectedPosition && (
                 <Marker
                   position={[selectedPosition.y, selectedPosition.x]}
                   icon={previewIcon}
@@ -739,13 +1033,10 @@ function App() {
                   key={p.id}
                   position={[p.y, p.x]}
                   icon={iconFor(categoryColor(p.category))}
-                  draggable={isAdmin}
+                  draggable={canEdit(p.category)}
                   eventHandlers={{
-                    click: () => {
-                      if (isAdmin) editPin(p);
-                    },
                     dragend: (e) => {
-                      if (!isAdmin) return;
+                      if (!canEdit(p.category)) return;
                       const pos = e.target.getLatLng();
                       movePin(p, pos);
                     }
@@ -757,7 +1048,7 @@ function App() {
                       <small>{p.category}</small>
                       {p.image_url && <img src={p.image_url} alt=""/>}
                       <p>{p.description}</p>
-                      {isAdmin && (
+                      {(canEdit(p.category) || canDelete(p.category)) && (
                         <button onClick={() => editPin(p)}>Edit pin</button>
                       )}
                     </div>
@@ -766,42 +1057,31 @@ function App() {
               ))}
             </MapContainer>
 
-            {!mapUrl && (
-              <div className="map-placeholder">
-                <div className="placeholder-grid"/>
-                <div className="placeholder-card">
-                  <div className="placeholder-icon"><MapPin size={23}/></div>
-                  <h3>Your Los Santos map goes here</h3>
-                  <p>Upload your GTA V map image into the public folder.</p>
-                </div>
-              </div>
-            )}
-
-            {isAdmin && (
-              <div className="placing-banner">
-                <Crosshair size={16}/>
-                CLICK THE MAP TO SELECT A LOCATION
-                {selectedPosition && (
-                  <button onClick={() => setSelectedPosition(null)}>
-                    Clear selection
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="placing-banner">
+              <Crosshair size={16}/>
+              {isOwner || visibleCategories.some(c => canAdd(c.name))
+                ? 'CLICK THE MAP TO SELECT A LOCATION'
+                : 'MAP VIEW ONLY'}
+              {selectedPosition && (
+                <button onClick={() => setSelectedPosition(null)}>
+                  Clear selection
+                </button>
+              )}
+            </div>
 
             <div className="map-coord">
               INTERACTIVE CARTOGRAPHY
               <span>•</span>
-              {isAdmin ? 'ADMIN SESSION' : 'VIEW ONLY'}
+              {isOwner ? 'OWNER SESSION' : 'MEMBER SESSION'}
             </div>
           </div>
 
           <div className="map-footer">
             <span>
               Drag to pan • Scroll to zoom
-              {isAdmin ? ' • Drag pins to move them' : ' • Select a pin for details'}
+              {' • Drag pins to move them when permitted'}
             </span>
-            <span>MAP DATA {configured ? 'CONNECTED' : 'NOT CONFIGURED'}</span>
+            <span>MAP DATA CONNECTED</span>
           </div>
         </section>
       </main>
@@ -813,68 +1093,7 @@ function App() {
         </div>
       )}
 
-      {adminOpen && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={e => {
-            if (e.target === e.currentTarget) setAdminOpen(false);
-          }}
-        >
-          <div className="modal auth-modal">
-            <button
-              className="modal-close"
-              onClick={() => setAdminOpen(false)}
-            >
-              <X/>
-            </button>
-            <div className="eyebrow">RESTRICTED ACCESS</div>
-            <h2>{isAdmin ? 'Admin session' : 'Admin login'}</h2>
-
-            {isAdmin ? (
-              <>
-                <p>You are signed in and can manage map pins and categories.</p>
-                <button className="primary wide" onClick={logout}>
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <form onSubmit={login}>
-                <p>Sign in with your Supabase admin account.</p>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                </label>
-                <label>
-                  Password
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Your password"
-                  />
-                </label>
-                <button className="primary wide" disabled={!configured}>
-                  Sign in
-                </button>
-                {!configured && (
-                  <small className="warning">
-                    Supabase setup is required before login works.
-                  </small>
-                )}
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {editing !== null && isAdmin && (
+      {editing !== null && (
         <div
           className="modal-backdrop"
           onMouseDown={e => {
@@ -906,9 +1125,13 @@ function App() {
                   value={draft.category}
                   onChange={e => setField('category', e.target.value)}
                 >
-                  {categories.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
+                  {visibleCategories
+                    .filter(c => editing === 'new'
+                      ? canAdd(c.name)
+                      : canEdit(c.name))
+                    .map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
                 </select>
               </label>
 
@@ -928,8 +1151,12 @@ function App() {
                 <input
                   type="file"
                   accept="image/*"
+                  disabled={!isOwner}
                   onChange={e => upload(e.target.files?.[0])}
                 />
+                {!isOwner && (
+                  <small>Image uploads are currently owner-only.</small>
+                )}
               </label>
 
               {draft.image_url && (
@@ -948,7 +1175,9 @@ function App() {
               </div>
 
               <div className="modal-actions">
-                {editing !== 'new' && (
+                {editing !== 'new' && canDelete(
+                  pins.find(p => p.id === editing)?.category
+                ) && (
                   <button
                     type="button"
                     className="danger-btn"
@@ -964,13 +1193,17 @@ function App() {
                 >
                   Cancel
                 </button>
-                <button
-                  className="primary"
-                  disabled={saving || !configured}
-                >
-                  <Save size={15}/>
-                  {saving ? 'Saving...' : 'Save pin'}
-                </button>
+                {(editing === 'new'
+                  ? canAdd(draft.category)
+                  : canEdit(pins.find(p => p.id === editing)?.category)) && (
+                  <button
+                    className="primary"
+                    disabled={saving || !configured}
+                  >
+                    <Save size={15}/>
+                    {saving ? 'Saving...' : 'Save pin'}
+                  </button>
+                )}
               </div>
             </form>
           </div>
