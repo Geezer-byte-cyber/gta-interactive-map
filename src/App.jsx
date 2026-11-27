@@ -11,7 +11,6 @@ import {
   Crosshair, Upload, Pencil, Check
 } from 'lucide-react';
 
-// New map image dimensions
 const MAP_WIDTH = 5944;
 const MAP_HEIGHT = 8075;
 
@@ -39,7 +38,7 @@ const iconFor = (color) => L.divIcon({
 
 const previewIcon = L.divIcon({
   className: 'pin-wrap',
-  html: '<span class="map-pin" style="--pin:#ffffff"><i></i></span>',
+  html: '<span class="map-pin" style="--pin:#ff8a24"><i></i></span>',
   iconSize: [26, 34],
   iconAnchor: [13, 31]
 });
@@ -83,11 +82,11 @@ function App() {
   const [notice, setNotice] = useState('');
 
   const [newCategory, setNewCategory] = useState('');
-  const [newColor, setNewColor] = useState('#58a6ff');
+  const [newColor, setNewColor] = useState('#ff8a24');
   const [categoryManager, setCategoryManager] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryName, setCategoryName] = useState('');
-  const [editingColor, setEditingColor] = useState('#58a6ff');
+  const [editingColor, setEditingColor] = useState('#ff8a24');
 
   const [mapUrl] = useState('/los-santos-map.jpg');
 
@@ -167,7 +166,7 @@ function App() {
   }, [session]);
 
   const categoryColor = (name) =>
-    categories.find(c => c.name === name)?.color || '#c4c9c5';
+    categories.find(c => c.name === name)?.color || '#ff8a24';
 
   const setField = (key, value) =>
     setDraft(d => ({ ...d, [key]: value }));
@@ -438,10 +437,10 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-mark">LS</div>
+          <div className="brand-mark">K</div>
           <div>
-            <div className="eyebrow">COMMUNITY ATLAS</div>
-            <h1>LOS SANTOS <span>FIELD GUIDE</span></h1>
+            <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
+            <h1>THE KNOX MAP</h1>
           </div>
         </div>
 
@@ -462,7 +461,7 @@ function App() {
         <aside className="sidebar">
           <div className="side-heading">
             <div>
-              <div className="eyebrow">EXPLORE THE CITY</div>
+              <div className="eyebrow">EXPLORE THE WORLD</div>
               <h2>Map directory</h2>
             </div>
             <span className="count">{filtered.length} PINS</span>
@@ -509,7 +508,7 @@ function App() {
           {isAdmin && (
             <div style={{
               marginTop: 22, paddingTop: 15,
-              borderTop: '1px solid #26352b'
+              borderTop: '1px solid #30251d'
             }}>
               <button
                 className="outline-btn"
@@ -523,8 +522,8 @@ function App() {
               {categoryManager && (
                 <div style={{
                   marginTop: 13, display: 'grid', gap: 10,
-                  background: '#0d140f', padding: 11,
-                  border: '1px solid #34483a', borderRadius: 5
+                  background: '#15110e', padding: 11,
+                  border: '1px solid #49301e', borderRadius: 5
                 }}>
                   <strong style={{ fontSize: 11 }}>Create category</strong>
 
@@ -536,8 +535,8 @@ function App() {
                       maxLength={40}
                       required
                       style={{
-                        width: '100%', padding: 9, background: '#17221b',
-                        color: '#fff', border: '1px solid #34483a',
+                        width: '100%', padding: 9, background: '#211710',
+                        color: '#fff', border: '1px solid #49301e',
                         borderRadius: 4
                       }}
                     />
@@ -562,7 +561,7 @@ function App() {
                   {categories.map(c => (
                     <div key={c.id} style={{
                       display: 'grid', gap: 7, padding: '8px 0',
-                      borderTop: '1px solid #26352b'
+                      borderTop: '1px solid #30251d'
                     }}>
                       {editingCategory === c.id ? (
                         <>
@@ -571,8 +570,8 @@ function App() {
                             onChange={e => setCategoryName(e.target.value)}
                             maxLength={40}
                             style={{
-                              padding: 7, background: '#17221b',
-                              color: '#fff', border: '1px solid #34483a'
+                              padding: 7, background: '#211710',
+                              color: '#fff', border: '1px solid #49301e'
                             }}
                           />
                           <label style={{
@@ -678,7 +677,7 @@ function App() {
 
             <div className="map-tools">
               {isAdmin && (
-                <span style={{ fontSize: 10, color: '#9fc5a4' }}>
+                <span style={{ fontSize: 10, color: '#ffad66' }}>
                   {selectedPosition ? 'LOCATION SELECTED' : 'CLICK MAP TO SELECT'}
                 </span>
               )}
