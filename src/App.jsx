@@ -41,7 +41,7 @@ function App(){
   const [placing,setPlacing]=useState(false);
   const [saving,setSaving]=useState(false);
   const [notice,setNotice]=useState('');
-  const [mapUrl,setMapUrl]=useState(localStorage.getItem('gta-map-image')||'');
+  const [mapUrl,setMapUrl]=useState('/los-santos-map.jpg');
   const isAdmin=!!session;
   const filtered=useMemo(()=>pins.filter(p=>(category==='All'||p.category===category)&&`${p.title} ${p.description} ${p.category}`.toLowerCase().includes(query.toLowerCase())),[pins,category,query]);
 
