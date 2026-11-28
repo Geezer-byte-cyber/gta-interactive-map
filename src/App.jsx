@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  MapContainer, ImageOverlay, Marker, Popup, useMapEvents
+  MapContainer, ImageOverlay, Marker, Polygon, Polyline, Popup, useMapEvents
 } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase, configured } from './supabase';
