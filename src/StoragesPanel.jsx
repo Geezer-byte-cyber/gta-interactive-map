@@ -5,7 +5,7 @@ import { Plus, X, Save, Trash2, ArrowLeft, Copy, ShieldCheck, Package, History, 
 const emptyStorage = () => ({ name: '', type: 'container', capacity: '', pincode: '', description: '' });
 const emptyItem = () => ({ name: '', quantity: '1', unitWeight: '' });
 
-export default function StoragesPanel({ isOwner, permissions = {}, accountType, onClose }) {
+export default function StoragesPanel({ isOwner, permissions = {}, accountType, onClose, readOnly = false, allowedStorageIds = null }) {
   const [storages, setStorages] = useState([]);
   const [users, setUsers] = useState([]);
   const [accessByStorage, setAccessByStorage] = useState({});
@@ -36,7 +36,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
     const { data, error } = await supabase.from('storages').select('*').order('name');
     if (error) setNotice(error.message);
     else {
-      setStorages(data || []);
+      setStorages(readOnly && Array.isArray(allowedStorageIds) ? (data || []).filter(item => allowedStorageIds.includes(item.id)) : (data || []));
       if (isOwner) {
         const ids = (data || []).map(item => item.id);
         if (ids.length) {
@@ -195,7 +195,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
         </div>
         <div className="crafting-toolbar">
           <div className="eyebrow">{storages.length} VISIBLE STORAGE{storages.length === 1 ? '' : 'S'}</div>
-          {canAdd && <button className="add-btn" onClick={openNew}><Plus size={16}/> Add storage</button>}
+          {canAdd && !readOnly && <button className="add-btn" onClick={openNew}><Plus size={16}/> Add storage</button>}
         </div>
         {notice && <div className="crafting-notice" role="status">{notice}<button onClick={() => setNotice('')}><X size={14}/></button></div>}
         {loading ? <p>Loading storages...</p> : !storages.length ? <div className="crafting-empty">No storages have been assigned to your account.</div> : (
@@ -205,8 +205,8 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
                 <div className="recipe-card-head">
                   <div><div className="eyebrow">{storage.type === 'safe' ? 'SAFE' : 'CONTAINER'}</div><h3>{storage.name}</h3></div>
                   <div className="recipe-actions" onClick={e => e.stopPropagation()}>
-                    {canEdit && <button className="outline-btn" onClick={() => openEdit(storage)}>Edit</button>}
-                    {canDelete && <button className="danger-icon" onClick={() => remove(storage)} title="Delete storage"><Trash2 size={15}/></button>}
+                    {canEdit && !readOnly && <button className="outline-btn" onClick={() => openEdit(storage)}>Edit</button>}
+                    {canDelete && !readOnly && <button className="danger-icon" onClick={() => remove(storage)} title="Delete storage"><Trash2 size={15}/></button>}
                   </div>
                 </div>
                 <div className="recipe-output"><span>MAX CAPACITY</span><strong>{storage.capacity.toLocaleString()}</strong></div>
@@ -248,12 +248,12 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
                 <div className="storage-item-controls">
                   <input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { quantity: e.target.value } }))}/>
-                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'add', row.quantity)}><Plus size={13}/> Add</button>
+                  {!readOnly && <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'add', row.quantity)}><Plus size={13}/> Add</button>
                   <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'remove', row.quantity)}><Minus size={13}/> Remove</button>
                 </div>
               </div>;
             })}
-            <form className="storage-add-form" onSubmit={e => { e.preventDefault(); submitMovement(itemDraft.name, 'add', itemDraft.quantity, itemDraft.unitWeight); }}>
+            {!readOnly && <form className="storage-add-form" onSubmit={e => { e.preventDefault(); submitMovement(itemDraft.name, 'add', itemDraft.quantity, itemDraft.unitWeight); }}>
               <h4><Plus size={15}/> Add item</h4>
               <label>Item name<input required value={itemDraft.name} onChange={e => setItemDraft(current => ({ ...current, name: e.target.value }))} placeholder="e.g. Metal scraps"/></label>
               <div className="storage-add-fields">
@@ -262,7 +262,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
               </div>
               <p className="storage-form-hint">If this item name already exists, its existing unit weight is kept and the quantity is combined.</p>
               <button className="primary" disabled={itemBusy}><Plus size={14}/>{itemBusy ? 'Saving...' : 'Add to storage'}</button>
-            </form>
+            </form>}
           </section>
           <section className="storage-history-panel">
             <div className="storage-panel-title"><h3><History size={17}/> Movement history</h3><span className="eyebrow">LATEST 25</span></div>
@@ -273,7 +273,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
           </section>
         </div>
       </>}
-      {editing !== null && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+      {!readOnly && editing !== null && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setEditing(null); }}>
         <div className="modal editor-modal recipe-modal">
           <button className="modal-close" onClick={() => setEditing(null)}><X/></button>
           <div className="eyebrow">{editing === 'new' ? 'NEW STORAGE' : 'EDIT STORAGE'}</div><h2>{editing === 'new' ? 'Add storage' : 'Edit storage'}</h2>
