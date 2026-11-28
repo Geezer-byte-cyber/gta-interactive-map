@@ -228,7 +228,7 @@ function App() {
         return;
       }
 
-      const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false };
+      const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false };
       setModuleAccess(access);
       const mapAllowed = profileData.role === 'owner' || access.can_view_map === true;
       setActiveSection(mapAllowed ? 'map' : (profileData.role === 'owner' || access.can_view_crafting ? 'crafting' : (profileData.role === 'owner' || (profileData.account_type === 'knox' && access.can_view_storages) ? 'storages' : (profileData.role === 'owner' || access.can_view_orders || access.can_view_own_orders ? 'orders' : ''))));
