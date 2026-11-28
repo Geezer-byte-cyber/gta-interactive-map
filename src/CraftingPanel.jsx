@@ -45,15 +45,16 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
 
   const save = async event => {
     event.preventDefault();
-    if (!draft.name.trim() || !draft.output_name.trim() || !Number.isInteger(Number(draft.output_quantity)) || Number(draft.output_quantity) < 1) {
-      setNotice('Enter a recipe name, output item and whole-number output quantity.'); return;
+    if (!draft.name.trim() || !Number.isInteger(Number(draft.output_quantity)) || Number(draft.output_quantity) < 1) {
+      setNotice('Enter the item name and a whole-number output quantity.'); return;
     }
     const ingredients = draft.ingredients.map(i => ({ name: i.name.trim(), quantity: Number(i.quantity) })).filter(i => i.name && Number.isFinite(i.quantity) && i.quantity > 0);
     if (!ingredients.length || ingredients.length !== draft.ingredients.filter(i => i.name.trim()).length) {
       setNotice('Each ingredient needs a name and a quantity greater than zero.'); return;
     }
     setSaving(true);
-    const payload = { name: draft.name.trim(), description: draft.description || '', output_name: draft.output_name.trim(), output_quantity: Number(draft.output_quantity), ingredients, is_hidden: draft.is_hidden === true };
+    const itemName = draft.name.trim();
+    const payload = { name: itemName, description: draft.description || '', output_name: itemName, output_quantity: Number(draft.output_quantity), ingredients, is_hidden: draft.is_hidden === true };
     const result = editing === 'new'
       ? await supabase.from('crafting_recipes').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id })
       : await supabase.from('crafting_recipes').update(payload).eq('id', editing);
@@ -87,7 +88,7 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
             return <article className="recipe-card" key={recipe.id}>
               <div className="recipe-card-head"><div><div className="eyebrow">{recipe.is_hidden ? 'HIDDEN RECIPE' : 'RECIPE'}</div><h3>{recipe.name}</h3></div><div className="recipe-actions">{canEdit && <button className="outline-btn" onClick={() => openEdit(recipe)}>Edit</button>}{canDelete && <button className="danger-icon" onClick={() => remove(recipe)} title="Delete recipe"><Trash2 size={15}/></button>}</div></div>
               {recipe.description && <p className="recipe-description">{recipe.description}</p>}
-              <div className="recipe-output"><span>OUTPUT</span><strong>{recipe.output_name}</strong><b>× {recipe.output_quantity}</b></div>
+              <div className="recipe-output"><span>MAKES</span><strong>{recipe.output_quantity} × {recipe.output_name}</strong></div>
               <div className="calculator-head"><Calculator size={15}/> OUTPUT CALCULATOR</div>
               <label className="desired-output">I want to make <input type="number" min="1" step="1" value={target} onChange={e => setDesired(v => ({ ...v, [recipe.id]: e.target.value }))}/> {recipe.output_name}</label>
               <div className="ingredient-list"><div className="ingredient-title">YOU WILL NEED</div>{(recipe.ingredients || []).map((item, i) => <div className="ingredient-row" key={i}><span>{item.name}</span><strong>{numberText(item.quantity * multiplier)}</strong></div>)}</div>
@@ -98,10 +99,10 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
       {editing !== null && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setEditing(null); }}><div className="modal editor-modal recipe-modal">
         <button className="modal-close" onClick={() => setEditing(null)}><X/></button><div className="eyebrow">{editing === 'new' ? 'NEW CRAFTING RECIPE' : 'EDIT CRAFTING RECIPE'}</div><h2>{editing === 'new' ? 'Add recipe' : 'Edit recipe'}</h2>
         <form onSubmit={save}>
-          <label>Recipe name<input required maxLength="100" value={draft.name} onChange={e => setDraftField('name', e.target.value)} placeholder="e.g. Radio Booster"/></label>
+          <label>Item crafted<input required maxLength="100" value={draft.name} onChange={e => { setDraftField('name', e.target.value); setDraftField('output_name', e.target.value); }} placeholder="e.g. Radio Booster"/></label>
           <label>Description / notes<textarea rows="2" value={draft.description} onChange={e => setDraftField('description', e.target.value)} placeholder="Optional crafting notes..."/></label>
           {canViewHidden && <label className="recipe-hidden-toggle"><input type="checkbox" checked={draft.is_hidden === true} onChange={e => setDraftField('is_hidden', e.target.checked)}/> Mark this recipe as hidden <span>Only users with the “View hidden recipes” permission can see it.</span></label>}
-          <div className="recipe-form-row"><label>Output item<input required value={draft.output_name} onChange={e => setDraftField('output_name', e.target.value)} placeholder="Radio Booster"/></label><label>Output quantity<input required type="number" min="1" step="1" value={draft.output_quantity} onChange={e => setDraftField('output_quantity', e.target.value)}/></label></div>
+          <label>Output quantity<input required type="number" min="1" step="1" value={draft.output_quantity} onChange={e => setDraftField('output_quantity', e.target.value)}/></label>
           <div className="ingredient-form-head"><strong>INGREDIENTS</strong><button type="button" className="small-btn" onClick={() => setDraftField('ingredients', [...draft.ingredients, { name: '', quantity: 1 }])}><Plus size={13}/> Add ingredient</button></div>
           {draft.ingredients.map((item, i) => <div className="ingredient-form-row" key={i}><input aria-label="Ingredient name" value={item.name} onChange={e => setIngredient(i, 'name', e.target.value)} placeholder="Ingredient name"/><input aria-label="Ingredient quantity" type="number" min="0.001" step="any" value={item.quantity} onChange={e => setIngredient(i, 'quantity', e.target.value)}/><button type="button" className="danger-icon" disabled={draft.ingredients.length === 1} onClick={() => setDraftField('ingredients', draft.ingredients.filter((_, index) => index !== i))}><Trash2 size={15}/></button></div>)}
           <div className="modal-actions"><button type="button" className="outline-btn" onClick={() => setEditing(null)}>Cancel</button><button className="primary" disabled={saving}><Save size={15}/>{saving ? 'Saving...' : 'Save recipe'}</button></div>
