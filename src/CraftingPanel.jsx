@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
 import { Plus, X, Save, Trash2, Calculator, Search, ArrowLeft } from 'lucide-react';
 
-const emptyRecipe = () => ({ name: '', description: '', output_name: '', output_quantity: 1, ingredients: [{ name: '', quantity: 1 }] });
+const emptyRecipe = () => ({ name: '', description: '', output_name: '', output_quantity: 1, is_hidden: false, ingredients: [{ name: '', quantity: 1 }] });
 const numberText = value => Number.isInteger(value) ? String(value) : Number(value.toFixed(3)).toString();
 
 export default function CraftingPanel({ onClose, permissions = {} }) {
@@ -18,20 +18,23 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
   const canAdd = permissions.isOwner || permissions.canAdd;
   const canEdit = permissions.isOwner || permissions.canEdit;
   const canDelete = permissions.isOwner || permissions.canDelete;
+  const canViewHidden = permissions.isOwner || permissions.canViewHidden;
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('crafting_recipes').select('*').order('name');
+    let query = supabase.from('crafting_recipes').select('*').order('name');
+    if (!canViewHidden) query = query.eq('is_hidden', false);
+    const { data, error } = await query;
     if (error) setNotice(error.message);
     else setRecipes(data || []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [canViewHidden]);
 
-  const visible = useMemo(() => recipes.filter(r =>
+  const visible = useMemo(() => recipes.filter(r => (canViewHidden || !r.is_hidden) &&
     `${r.name} ${r.output_name} ${r.description} ${(r.ingredients || []).map(i => i.name).join(' ')}`.toLowerCase().includes(search.toLowerCase())
-  ), [recipes, search]);
+  ), [recipes, search, canViewHidden]);
 
   const setDraftField = (key, value) => setDraft(current => ({ ...current, [key]: value }));
   const setIngredient = (index, key, value) => setDraft(current => ({
@@ -50,7 +53,7 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
       setNotice('Each ingredient needs a name and a quantity greater than zero.'); return;
     }
     setSaving(true);
-    const payload = { name: draft.name.trim(), description: draft.description || '', output_name: draft.output_name.trim(), output_quantity: Number(draft.output_quantity), ingredients };
+    const payload = { name: draft.name.trim(), description: draft.description || '', output_name: draft.output_name.trim(), output_quantity: Number(draft.output_quantity), ingredients, is_hidden: draft.is_hidden === true };
     const result = editing === 'new'
       ? await supabase.from('crafting_recipes').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id })
       : await supabase.from('crafting_recipes').update(payload).eq('id', editing);
@@ -82,7 +85,7 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
             const target = Math.max(1, Number(desired[recipe.id] ?? recipe.output_quantity));
             const multiplier = target / recipe.output_quantity;
             return <article className="recipe-card" key={recipe.id}>
-              <div className="recipe-card-head"><div><div className="eyebrow">RECIPE</div><h3>{recipe.name}</h3></div><div className="recipe-actions">{canEdit && <button className="outline-btn" onClick={() => openEdit(recipe)}>Edit</button>}{canDelete && <button className="danger-icon" onClick={() => remove(recipe)} title="Delete recipe"><Trash2 size={15}/></button>}</div></div>
+              <div className="recipe-card-head"><div><div className="eyebrow">{recipe.is_hidden ? 'HIDDEN RECIPE' : 'RECIPE'}</div><h3>{recipe.name}</h3></div><div className="recipe-actions">{canEdit && <button className="outline-btn" onClick={() => openEdit(recipe)}>Edit</button>}{canDelete && <button className="danger-icon" onClick={() => remove(recipe)} title="Delete recipe"><Trash2 size={15}/></button>}</div></div>
               {recipe.description && <p className="recipe-description">{recipe.description}</p>}
               <div className="recipe-output"><span>OUTPUT</span><strong>{recipe.output_name}</strong><b>× {recipe.output_quantity}</b></div>
               <div className="calculator-head"><Calculator size={15}/> OUTPUT CALCULATOR</div>
@@ -97,6 +100,7 @@ export default function CraftingPanel({ onClose, permissions = {} }) {
         <form onSubmit={save}>
           <label>Recipe name<input required maxLength="100" value={draft.name} onChange={e => setDraftField('name', e.target.value)} placeholder="e.g. Radio Booster"/></label>
           <label>Description / notes<textarea rows="2" value={draft.description} onChange={e => setDraftField('description', e.target.value)} placeholder="Optional crafting notes..."/></label>
+          <label className="recipe-hidden-toggle"><input type="checkbox" checked={draft.is_hidden === true} onChange={e => setDraftField('is_hidden', e.target.checked)}/> Mark this recipe as hidden <span>Only users with the “View hidden recipes” permission can see it.</span></label>
           <div className="recipe-form-row"><label>Output item<input required value={draft.output_name} onChange={e => setDraftField('output_name', e.target.value)} placeholder="Radio Booster"/></label><label>Output quantity<input required type="number" min="1" step="1" value={draft.output_quantity} onChange={e => setDraftField('output_quantity', e.target.value)}/></label></div>
           <div className="ingredient-form-head"><strong>INGREDIENTS</strong><button type="button" className="small-btn" onClick={() => setDraftField('ingredients', [...draft.ingredients, { name: '', quantity: 1 }])}><Plus size={13}/> Add ingredient</button></div>
           {draft.ingredients.map((item, i) => <div className="ingredient-form-row" key={i}><input aria-label="Ingredient name" value={item.name} onChange={e => setIngredient(i, 'name', e.target.value)} placeholder="Ingredient name"/><input aria-label="Ingredient quantity" type="number" min="0.001" step="any" value={item.quantity} onChange={e => setIngredient(i, 'quantity', e.target.value)}/><button type="button" className="danger-icon" disabled={draft.ingredients.length === 1} onClick={() => setDraftField('ingredients', draft.ingredients.filter((_, index) => index !== i))}><Trash2 size={15}/></button></div>)}
