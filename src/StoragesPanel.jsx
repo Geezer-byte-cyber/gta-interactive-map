@@ -14,6 +14,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
   const [editing, setEditing] = useState(null);
   const [selectedStorage, setSelectedStorage] = useState(null);
   const [items, setItems] = useState([]);
+  const [itemSearch, setItemSearch] = useState('');
   const [movements, setMovements] = useState([]);
   const [itemDraft, setItemDraft] = useState(emptyItem());
   const [itemAction, setItemAction] = useState('add');
@@ -181,6 +182,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
   const usedCapacity = items.reduce((total, item) => total + Number(item.quantity) * Number(item.unit_weight), 0);
   const availableCapacity = Number(selectedStorage?.capacity || 0) - usedCapacity;
   const formatWeight = value => Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const filteredItems = items.filter(item => item.name.toLowerCase().includes(itemSearch.trim().toLowerCase()));
 
   if (accountType === 'customer') return null;
 
@@ -235,7 +237,11 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
         <div className="storage-inventory-layout">
           <section className="storage-inventory-panel">
             <div className="storage-panel-title"><h3><Package size={17}/> Items in storage</h3><button className="outline-btn" onClick={() => loadInventory(selectedStorage)}><RefreshCw size={13}/> Refresh</button></div>
-            {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : items.map(item => {
+            <div className="storage-item-search">
+              <input type="search" aria-label="Search storage items" placeholder="Search items by name..." value={itemSearch} onChange={e => setItemSearch(e.target.value)} />
+              {itemSearch && <button type="button" className="outline-btn" onClick={() => setItemSearch('')}>Clear</button>}
+            </div>
+            {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : !filteredItems.length ? <div className="crafting-empty">No items match “{itemSearch}”.</div> : filteredItems.map(item => {
               const row = rowActions[item.id] || { quantity: '1' };
               return <div className="storage-item-row" key={item.id}>
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
