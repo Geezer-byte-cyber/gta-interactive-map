@@ -190,7 +190,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
     <div className="crafting-page">
       {!selectedStorage ? <>
         <div className="crafting-heading">
-          <div><div className="eyebrow">THE KNOX MAP • SECURE STORAGE DIRECTORY</div><h2>Storages</h2><p>Storage locations, capacity and access pincodes.</p></div>
+          <div><div className="eyebrow">KNOX HQ • SECURE STORAGE DIRECTORY</div><h2>Storages</h2><p>Storage locations, capacity and access pincodes.</p></div>
           <button className="outline-btn" onClick={onClose}><ArrowLeft size={15}/> Back</button>
         </div>
         <div className="crafting-toolbar">
