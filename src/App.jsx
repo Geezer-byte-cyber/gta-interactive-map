@@ -8,6 +8,7 @@ import { supabase, configured } from './supabase';
 import AdminPanel from './AdminPanel';
 import CraftingPanel from './CraftingPanel';
 import OrdersPanel from './OrdersPanel';
+import CataloguePanel from './CataloguePanel';
 import {
   Search, Plus, LogOut, X, Save, Trash2,
   Image as ImageIcon, MapPin, SlidersHorizontal,
@@ -108,6 +109,7 @@ function App() {
   const hasMapAccess = isOwner || moduleAccess?.can_view_map === true;
   const hasCraftingAccess = isOwner || moduleAccess?.can_view_crafting === true;
   const hasOrdersAccess = isOwner || moduleAccess?.can_view_orders === true;
+  const hasCatalogueAccess = isOwner || moduleAccess?.can_view_catalogue === true;
   const hasOwnOrdersAccess = isOwner || moduleAccess?.can_view_own_orders === true;
 
   const permissionFor = (categoryName) =>
@@ -207,7 +209,7 @@ function App() {
             .select('category_id, can_add, can_edit, can_delete')
             .eq('user_id', session.user.id),
           supabase.from('user_module_permissions')
-            .select('can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders')
+            .select('can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders, can_view_catalogue')
             .eq('user_id', session.user.id).maybeSingle()
         ]);
 
@@ -806,6 +808,7 @@ function App() {
         <div className="top-actions">
           {hasMapAccess && <button className={activeSection === 'map' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('map')}>Map</button>}
           {hasCraftingAccess && <button className={activeSection === 'crafting' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('crafting')}>Crafting</button>}
+          {hasCatalogueAccess && <button className={activeSection === 'catalogue' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('catalogue')}>Catalogue</button>}
           {(hasOrdersAccess || hasOwnOrdersAccess) && <button className={activeSection === 'orders' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('orders')}>Orders</button>}
           <span className="live-dot">{activeSection === 'crafting' ? 'WORKSHOP ONLINE' : activeSection === 'orders' ? 'ORDER DESK ONLINE' : hasMapAccess ? 'MAP ONLINE' : 'ACCOUNT ONLINE'}</span>
           <span style={{ color: '#ffad66', fontSize: 11 }}>
@@ -828,7 +831,9 @@ function App() {
         </div>
       </header>
 
-      {activeSection === 'crafting' && hasCraftingAccess ? (
+      {activeSection === 'catalogue' && hasCatalogueAccess ? (
+        <CataloguePanel isOwner={isOwner} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : '')))} />
+      ) : activeSection === 'crafting' && hasCraftingAccess ? (
         <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes, canViewHidden: moduleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : ''))} />
       ) : activeSection === 'orders' && (hasOrdersAccess || hasOwnOrdersAccess) ? (
         <OrdersPanel isCustomer={!isOwner && !hasOrdersAccess && hasOwnOrdersAccess} canManage={isOwner || hasOrdersAccess} canCreate={isOwner || moduleAccess?.can_create_orders === true} canEdit={isOwner || moduleAccess?.can_edit_orders === true} canDelete={isOwner || moduleAccess?.can_delete_orders === true} canManageCustomers={isOwner || moduleAccess?.can_manage_customers === true} username={profile?.username || ''} />
