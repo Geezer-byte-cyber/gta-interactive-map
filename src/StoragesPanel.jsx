@@ -236,13 +236,13 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
           <section className="storage-inventory-panel">
             <div className="storage-panel-title"><h3><Package size={17}/> Items in storage</h3><button className="outline-btn" onClick={() => loadInventory(selectedStorage)}><RefreshCw size={13}/> Refresh</button></div>
             {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : items.map(item => {
-              const row = rowActions[item.id] || { action: 'remove', quantity: '1' };
+              const row = rowActions[item.id] || { quantity: '1' };
               return <div className="storage-item-row" key={item.id}>
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
                 <div className="storage-item-controls">
-                  <select aria-label={`Action for ${item.name}`} value={row.action} onChange={e => setRowActions(current => ({ ...current, [item.id]: { ...row, action: e.target.value } }))}><option value="remove">Remove</option><option value="add">Add</option></select>
-                  <input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { ...row, quantity: e.target.value } }))}/>
-                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, row.action, row.quantity)}>{row.action === 'add' ? <Plus size={13}/> : <Minus size={13}/>} {row.action}</button>
+                  <input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { quantity: e.target.value } }))}/>
+                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'add', row.quantity)}><Plus size={13}/> Add</button>
+                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'remove', row.quantity)}><Minus size={13}/> Remove</button>
                 </div>
               </div>;
             })}
