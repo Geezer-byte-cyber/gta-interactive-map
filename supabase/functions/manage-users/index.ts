@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
 
     // LIST USERS, CATEGORIES AND PERMISSIONS
     if (action === "list") {
-      const [profilesResult, categoriesResult, permissionsResult, moduleResult] =
+      const [profilesResult, categoriesResult, permissionsResult, moduleResult, catalogueCategoriesResult, cataloguePermissionsResult] =
         await Promise.all([
           admin
             .from("user_profiles")
@@ -275,7 +275,9 @@ Deno.serve(async (req) => {
             .select("user_id, category_id, can_add, can_edit, can_delete"),
           admin
             .from("user_module_permissions")
-            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders"),
+            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders, can_view_catalogue"),
+          admin.from("catalogue_categories").select("id, name").order("name"),
+          admin.from("catalogue_category_permissions").select("user_id, category_id, can_add, can_edit, can_delete"),
         ]);
 
       if (profilesResult.error) {
@@ -300,8 +302,19 @@ Deno.serve(async (req) => {
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
         moduleAccess: profile.role === "owner"
-          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true }
-          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false }),
+          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true, can_view_catalogue: true }
+          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false }),
+        cataloguePermissions: (catalogueCategoriesResult.data || []).map(category => {
+          const permission = (cataloguePermissionsResult.data || []).find(item => item.user_id === profile.user_id && item.category_id === category.id);
+          return {
+            categoryId: category.id,
+            categoryName: category.name,
+            canView: profile.role === "owner" || !!permission,
+            canAdd: profile.role === "owner" || !!permission?.can_add,
+            canEdit: profile.role === "owner" || !!permission?.can_edit,
+            canDelete: profile.role === "owner" || !!permission?.can_delete,
+          };
+        }),
         permissions: (categoriesResult.data || []).map((category) => {
           const permission = (permissionsResult.data || []).find(
             (item) =>
@@ -426,13 +439,31 @@ Deno.serve(async (req) => {
         can_edit_orders: requested.can_view_orders === true && requested.can_edit_orders === true,
         can_delete_orders: requested.can_view_orders === true && requested.can_delete_orders === true,
         can_manage_customers: requested.can_view_orders === true && requested.can_manage_customers === true,
-        can_view_own_orders: requested.can_view_own_orders === true,
+        can_view_own_orders: requested.can_view_own_orders === true,\n        can_view_catalogue: requested.can_view_catalogue === true,
       };
       const { error: moduleSaveError } = await admin
         .from("user_module_permissions")
         .upsert(moduleRow, { onConflict: "user_id" });
       if (moduleSaveError) {
         return fail("Could not save section permissions", 500);
+      }
+      const { data: catalogueCategories, error: catalogueCategoriesError } = await admin.from("catalogue_categories").select("id");
+      if (catalogueCategoriesError) return fail("Could not validate catalogue categories", 500);
+      const validCatalogueIds = new Set((catalogueCategories || []).map(c => c.id));
+      const catalogueRows = [];
+      const requestedCatalogue = target && body.accountType === "customer" && Array.isArray(body.cataloguePermissions)
+        ? body.cataloguePermissions as Array<Record<string, unknown>>
+        : [];
+      for (const item of requestedCatalogue) {
+        const categoryId = String(item.categoryId || "");
+        if (!validCatalogueIds.has(categoryId)) return fail("One of the selected catalogue categories is invalid");
+        if (item.canView === true) catalogueRows.push({ user_id: userId, category_id: categoryId, can_add: false, can_edit: false, can_delete: false });
+      }
+      const { error: clearCatalogueError } = await admin.from("catalogue_category_permissions").delete().eq("user_id", userId);
+      if (clearCatalogueError) return fail("Could not clear catalogue category permissions", 500);
+      if (catalogueRows.length) {
+        const { error: insertCatalogueError } = await admin.from("catalogue_category_permissions").insert(catalogueRows);
+        if (insertCatalogueError) return fail("Could not save catalogue category permissions", 500);
       }
       const accountType = body.accountType === "customer" ? "customer" : "knox";
       const { error: accountTypeError } = await admin.from("user_profiles")
