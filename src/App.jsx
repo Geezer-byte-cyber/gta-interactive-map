@@ -839,7 +839,6 @@ function App() {
             <span>Unofficial fan-made community project</span>
           </div>
 
-          {isPreview && <div style={{position:'fixed',zIndex:2500,top:70,left:'50%',transform:'translateX(-50%)',background:'#382517',border:'1px solid #ff8a24',borderRadius:6,padding:'9px 14px',color:'#fff',display:'flex',alignItems:'center',gap:12,boxShadow:'0 5px 20px #0009'}}><strong>READ-ONLY PREVIEW · {effectiveProfile.username}</strong><button className="outline-btn" onClick={() => { setPreviewUser(null); setActiveSection('map'); }}>Exit preview</button></div>}
       {notice && (
             <div className="toast" role="status" style={{ position: 'static', marginTop: 15 }}>
               {notice}
@@ -888,6 +887,8 @@ function App() {
           </button>
         </div>
       </header>
+
+      {isPreview && <div style={{position:'fixed',zIndex:2500,top:76,left:'50%',transform:'translateX(-50%)',background:'#382517',border:'1px solid #ff8a24',borderRadius:6,padding:'9px 14px',color:'#fff',display:'flex',alignItems:'center',gap:12,boxShadow:'0 5px 20px #0009'}}><strong>READ-ONLY PREVIEW · {effectiveProfile.username}</strong><button className="outline-btn" onClick={() => { setPreviewUser(null); setActiveSection('map'); }}>Exit preview</button></div>}
 
       {activeSection === 'catalogue' && hasCatalogueAccess ? (
         <CataloguePanel isOwner={isOwner} previewReadOnly={isPreview} previewCategories={previewUser?.cataloguePermissions} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : '')))} />
