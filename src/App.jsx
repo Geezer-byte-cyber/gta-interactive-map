@@ -84,6 +84,14 @@ function App() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryName, setCategoryName] = useState('');
   const [editingColor, setEditingColor] = useState('#ff8a24');
+  const [newAllowRanges, setNewAllowRanges] = useState(false);
+  const [editingAllowRanges, setEditingAllowRanges] = useState(false);
+  const [rangeDrawing, setRangeDrawing] = useState(false);
+  const [rangePoints, setRangePoints] = useState([]);
+  const [hiddenCategoryIds, setHiddenCategoryIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('knox-hidden-categories') || '[]'); }
+    catch { return []; }
+  });
 
   // Admin Panel is closed by default.
   const [adminOpen, setAdminOpen] = useState(false);
@@ -116,9 +124,11 @@ function App() {
     [categories, permissions, profile]
   );
 
+  useEffect(() => { localStorage.setItem('knox-hidden-categories', JSON.stringify(hiddenCategoryIds)); }, [hiddenCategoryIds]);
+
   const visiblePins = useMemo(
-    () => pins.filter(p => canView(p.category)),
-    [pins, permissions, profile]
+    () => pins.filter(p => canView(p.category) && !hiddenCategoryIds.includes(categories.find(c => c.name === p.category)?.id)),
+    [pins, permissions, profile, categories, hiddenCategoryIds]
   );
 
   const filtered = useMemo(() =>
@@ -309,10 +319,19 @@ function App() {
 
   const pickLocation = (position) => {
     setSelectedPosition(position);
-    setNotice(
-      `Location selected: X ${Math.round(position.x)}, Y ${Math.round(position.y)}`
-    );
+    setNotice(`Location selected: X ${Math.round(position.x)}, Y ${Math.round(position.y)}`);
   };
+
+  const handleMapPick = (position) => {
+    if (rangeDrawing) { setRangePoints(points => [...points, position]); setNotice(`Range point ${rangePoints.length + 1} added.`); return; }
+    pickLocation(position);
+  };
+  const beginRangeDrawing = () => { setRangePoints([]); setSelectedPosition(null); setRangeDrawing(true); setNotice('Click the map to add range points. Add at least three, then finish.'); };
+  const finishRangeDrawing = () => {
+    if (rangePoints.length < 3) { setNotice('A range needs at least three points before it can be finished.'); return; }
+    setField('range_coordinates', rangePoints); setRangeDrawing(false); setNotice('Range shape added to the pin. Save the pin to keep it.');
+  };
+  const cancelRangeDrawing = () => { setRangeDrawing(false); setRangePoints([]); setNotice('Range drawing cancelled.'); };
 
   const startNew = () => {
     const firstAllowed = visibleCategories.find(c => canAdd(c.name));
@@ -447,7 +466,8 @@ function App() {
       category: draft.category,
       image_url: draft.image_url || null,
       x: draft.x,
-      y: draft.y
+      y: draft.y,
+      range_coordinates: Array.isArray(draft.range_coordinates) && draft.range_coordinates.length >= 3 ? draft.range_coordinates : null
     };
 
     const result = editing === 'new'
@@ -559,7 +579,7 @@ function App() {
 
     const { error } = await supabase
       .from('map_categories')
-      .insert({ name, color: newColor });
+      .insert({ name, color: newColor, allow_ranges: newAllowRanges });
 
     if (error) {
       setNotice(error.message);
@@ -567,6 +587,7 @@ function App() {
     }
 
     setNewCategory('');
+    setNewAllowRanges(false);
     setNotice(`Category "${name}" created.`);
     await loadCategories();
   };
@@ -575,6 +596,7 @@ function App() {
     setEditingCategory(c.id);
     setCategoryName(c.name);
     setEditingColor(c.color);
+    setEditingAllowRanges(!!c.allow_ranges);
   };
 
   const saveCategoryEdit = async (id, oldName) => {
@@ -606,7 +628,7 @@ function App() {
 
     const { error } = await supabase
       .from('map_categories')
-      .update({ name, color: editingColor })
+      .update({ name, color: editingColor, allow_ranges: editingAllowRanges })
       .eq('id', id);
 
     if (error) {
@@ -813,15 +835,13 @@ function App() {
             </button>
 
             {visibleCategories.map(c => (
-              <button
-                key={c.id}
-                className={category === c.name ? 'cat active' : 'cat'}
-                onClick={() => setCategory(c.name)}
-              >
-                <span className="swatch" style={{ background: c.color }}/>
-                {c.name}
-                <b>{visiblePins.filter(p => p.category === c.name).length}</b>
-              </button>
+              <div key={c.id} className="category-filter-row">
+                <input type="checkbox" aria-label={`Show ${c.name} on map`} checked={!hiddenCategoryIds.includes(c.id)} onChange={e => { setHiddenCategoryIds(ids => e.target.checked ? ids.filter(id => id !== c.id) : [...ids, c.id]); if (!e.target.checked && category === c.name) setCategory('All'); }}/>
+                <button className={category === c.name ? 'cat active' : 'cat'} onClick={() => setCategory(c.name)}>
+                  <span className="swatch" style={{ background: c.color }}/>{c.name}
+                  <b>{pins.filter(p => canView(p.category) && p.category === c.name).length}</b>
+                </button>
+              </div>
             ))}
           </div>
 
@@ -866,6 +886,7 @@ function App() {
                         onChange={e => setNewColor(e.target.value)}
                       />
                     </label>
+                    <label className="range-toggle"><input type="checkbox" checked={newAllowRanges} onChange={e => setNewAllowRanges(e.target.checked)}/> Allow individual pin ranges</label>
                     <button className="primary" type="submit">
                       <Plus size={14}/> Create category
                     </button>
@@ -896,6 +917,7 @@ function App() {
                               onChange={e => setEditingColor(e.target.value)}
                             />
                           </label>
+                          <label className="range-toggle"><input type="checkbox" checked={editingAllowRanges} onChange={e => setEditingAllowRanges(e.target.checked)}/> Allow individual pin ranges</label>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button
                               className="small-btn"
@@ -1030,12 +1052,11 @@ function App() {
             >
               <MapImage src={mapUrl}/>
 
-              <ClickCapture
-                active={isOwner || visibleCategories.some(c => canAdd(c.name))}
-                onPick={pickLocation}
-              />
+              <ClickCapture active={rangeDrawing || isOwner || visibleCategories.some(c => canAdd(c.name))} onPick={handleMapPick}/>
+              {rangeDrawing && rangePoints.length > 1 && <Polyline positions={rangePoints.map(point => [point.y, point.x])} pathOptions={{ color: '#ff8a24', weight: 3, dashArray: '6 6' }}/>}
+              {filtered.filter(p => Array.isArray(p.range_coordinates) && p.range_coordinates.length >= 3 && categories.find(c => c.name === p.category)?.allow_ranges).map(p => <Polygon key={`range-${p.id}`} positions={p.range_coordinates.map(point => [point.y, point.x])} pathOptions={{ color: categoryColor(p.category), fillColor: categoryColor(p.category), fillOpacity: 0.22, weight: 2 }}/>)}
 
-              {selectedPosition && (
+              {selectedPosition && !rangeDrawing && (
                 <Marker
                   position={[selectedPosition.y, selectedPosition.x]}
                   icon={previewIcon}
@@ -1080,17 +1101,7 @@ function App() {
               ))}
             </MapContainer>
 
-            <div className="placing-banner">
-              <Crosshair size={16}/>
-              {isOwner || visibleCategories.some(c => canAdd(c.name))
-                ? 'CLICK THE MAP TO SELECT A LOCATION'
-                : 'MAP VIEW ONLY'}
-              {selectedPosition && (
-                <button onClick={() => setSelectedPosition(null)}>
-                  Clear selection
-                </button>
-              )}
-            </div>
+            {rangeDrawing ? <div className="placing-banner range-banner"><Crosshair size={16}/> DRAWING PIN RANGE · {rangePoints.length} POINTS <button onClick={() => setRangePoints(points => points.slice(0, -1))} disabled={!rangePoints.length}>Undo</button><button onClick={finishRangeDrawing}>Finish</button><button onClick={cancelRangeDrawing}>Cancel</button></div> : <div className="placing-banner"><Crosshair size={16}/>{isOwner || visibleCategories.some(c => canAdd(c.name)) ? 'CLICK THE MAP TO SELECT A LOCATION' : 'MAP VIEW ONLY'}{selectedPosition && <button onClick={() => setSelectedPosition(null)}>Clear selection</button>}</div>}
 
             <div className="map-coord">
               INTERACTIVE CARTOGRAPHY
@@ -1121,7 +1132,7 @@ function App() {
         <AdminPanel onClose={() => setAdminOpen(false)} />
       )}
 
-      {editing !== null && (
+      {editing !== null && !rangeDrawing && (
         <div
           className="modal-backdrop"
           onMouseDown={e => {
@@ -1201,7 +1212,7 @@ function App() {
                   X {Math.round(draft.x)} / Y {Math.round(draft.y)}
                 </span>
               </div>
-
+              {categories.find(c => c.name === draft.category)?.allow_ranges && (editing === 'new' ? canAdd(draft.category) : canEdit(pins.find(p => p.id === editing)?.category)) && <div className="range-editor"><strong>PIN RANGE</strong><p>{Array.isArray(draft.range_coordinates) && draft.range_coordinates.length >= 3 ? `${draft.range_coordinates.length} points saved for this pin.` : 'No range has been drawn for this pin.'}</p><div className="range-editor-actions"><button type="button" className="small-btn" onClick={beginRangeDrawing}><Crosshair size={13}/>{draft.range_coordinates?.length ? 'Redraw range' : 'Draw range'}</button>{draft.range_coordinates?.length > 0 && <button type="button" className="small-btn" onClick={() => setField('range_coordinates', null)}><Trash2 size={13}/> Remove range</button>}</div></div>}
               <div className="modal-actions">
                 {editing !== 'new' && canDelete(
                   pins.find(p => p.id === editing)?.category
