@@ -68,7 +68,7 @@ export default function AdminPanel({ onClose }) {
   const [cataloguePermissions, setCataloguePermissions] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [permissions, setPermissions] = useState([]);
-  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false });
+  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false });
   const [accountMarker, setAccountMarker] = useState('knox');
 
   const [newUsername, setNewUsername] = useState('');
@@ -544,7 +544,8 @@ export default function AdminPanel({ onClose }) {
                     { title: 'Map panel', description: 'Access to the interactive map.', permissions: [['can_view_map', 'View Map']] },
                     { title: 'Crafting panel', description: 'Manage crafting recipes and hidden recipe visibility.', permissions: [['can_view_crafting', 'View Crafting'], ['can_add_recipes', 'Add recipes'], ['can_edit_recipes', 'Edit recipes'], ['can_delete_recipes', 'Delete recipes'], ['can_view_hidden_recipes', 'View hidden recipes']] },
                     { title: 'Orders panel', description: 'Manage the order desk and customer order portal.', permissions: [['can_view_orders', 'View Orders desk'], ['can_create_orders', 'Create orders'], ['can_edit_orders', 'Edit orders / update status'], ['can_delete_orders', 'Delete orders'], ['can_manage_customers', 'Create customer accounts'], ['can_view_own_orders', 'Customer portal: view assigned orders']] },
-                    { title: 'Catalogue panel', description: 'Access to the catalogue and its price list.', permissions: [['can_view_catalogue', 'View Catalogue']] }
+                    { title: 'Catalogue panel', description: 'Access to the catalogue and its price list.', permissions: [['can_view_catalogue', 'View Catalogue']] },
+                    { title: 'Storages panel', description: 'View and manage assigned storages. Customers cannot access this panel.', permissions: [['can_view_storages', 'View assigned storages'], ['can_add_storages', 'Add storages'], ['can_edit_storages', 'Edit storages'], ['can_delete_storages', 'Delete storages']] }
                   ].filter(group => accountMarker !== 'customer' || !['Map panel', 'Crafting panel'].includes(group.title)).map(group => (
                     <div key={group.title} style={{ border: '1px solid #49301e', borderRadius: 5, padding: 11, marginTop: 9, background: '#100d0a' }}>
                       <h5 style={{ margin: '0 0 3px', color: '#ffad66', fontSize: 13 }}>{group.title}</h5>
@@ -553,12 +554,15 @@ export default function AdminPanel({ onClose }) {
                         {group.permissions.map(([key, label]) => (
                           <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
                             <input type="checkbox" checked={moduleAccess[key] === true}
-                              disabled={(['can_add_recipes','can_edit_recipes','can_delete_recipes','can_view_hidden_recipes'].includes(key)) && !moduleAccess.can_view_crafting || (['can_create_orders','can_edit_orders','can_delete_orders','can_manage_customers'].includes(key)) && !moduleAccess.can_view_orders}
+                              disabled={(['can_add_recipes','can_edit_recipes','can_delete_recipes','can_view_hidden_recipes'].includes(key)) && !moduleAccess.can_view_crafting || (['can_create_orders','can_edit_orders','can_delete_orders','can_manage_customers'].includes(key)) && !moduleAccess.can_view_orders || (['can_add_storages','can_edit_storages','can_delete_storages'].includes(key)) && !moduleAccess.can_view_storages}
                               onChange={e => setModuleAccess(current => {
                                 const next = { ...current, [key]: e.target.checked };
                                 if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; next.can_manage_customers = false; }
                                 if (key === 'can_view_crafting' && !e.target.checked) {
                                   next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false; next.can_view_hidden_recipes = false;
+                                }
+                                if (key === 'can_view_storages' && !e.target.checked) {
+                                  next.can_add_storages = false; next.can_edit_storages = false; next.can_delete_storages = false;
                                 }
                                 return next;
                               })}/>
