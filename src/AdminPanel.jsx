@@ -533,35 +533,34 @@ export default function AdminPanel({ onClose }) {
             ) : (
               <>
                 <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '12px 0 18px' }}>
-                  <h4 style={{ margin: '0 0 10px', color: '#ffad66' }}>Website section access</h4>
+                  <h4 style={{ margin: '0 0 12px', color: '#ffad66' }}>Website section access</h4>
                   {[
-                    ['can_view_map', 'View Map'],
-                    ['can_view_crafting', 'View Crafting'],
-                    ['can_add_recipes', 'Add recipes'],
-                    ['can_edit_recipes', 'Edit recipes'],
-                    ['can_delete_recipes', 'Delete recipes'],
-                    ['can_view_hidden_recipes', 'View hidden recipes'],
-                    ['can_view_orders', 'View Orders desk'],
-                    ['can_create_orders', 'Create orders'],
-                    ['can_edit_orders', 'Edit orders / update status'],
-                    ['can_delete_orders', 'Delete orders'],
-                    ['can_manage_customers', 'Create customer accounts'],
-                    ['can_view_own_orders', 'Customer portal: view assigned orders'],
-                    ['can_view_catalogue', 'View Catalogue']
-                  ].map(([key, label]) => (
-                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
-                      <input type="checkbox" checked={moduleAccess[key] === true}
-                        disabled={(['can_add_recipes','can_edit_recipes','can_delete_recipes','can_view_hidden_recipes'].includes(key)) && !moduleAccess.can_view_crafting || (['can_create_orders','can_edit_orders','can_delete_orders','can_manage_customers'].includes(key)) && !moduleAccess.can_view_orders}
-                        onChange={e => setModuleAccess(current => {
-                          const next = { ...current, [key]: e.target.checked };
-                          if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; }
-                          if (key === 'can_view_crafting' && !e.target.checked) {
-                            next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false; next.can_view_hidden_recipes = false;
-                          }
-                          return next;
-                        })}/>
-                      {label}
-                    </label>
+                    { title: 'Map panel', description: 'Access to the interactive map.', permissions: [['can_view_map', 'View Map']] },
+                    { title: 'Crafting panel', description: 'Manage crafting recipes and hidden recipe visibility.', permissions: [['can_view_crafting', 'View Crafting'], ['can_add_recipes', 'Add recipes'], ['can_edit_recipes', 'Edit recipes'], ['can_delete_recipes', 'Delete recipes'], ['can_view_hidden_recipes', 'View hidden recipes']] },
+                    { title: 'Orders panel', description: 'Manage the order desk and customer order portal.', permissions: [['can_view_orders', 'View Orders desk'], ['can_create_orders', 'Create orders'], ['can_edit_orders', 'Edit orders / update status'], ['can_delete_orders', 'Delete orders'], ['can_manage_customers', 'Create customer accounts'], ['can_view_own_orders', 'Customer portal: view assigned orders']] },
+                    { title: 'Catalogue panel', description: 'Access to the catalogue and its price list.', permissions: [['can_view_catalogue', 'View Catalogue']] }
+                  ].map(group => (
+                    <div key={group.title} style={{ border: '1px solid #49301e', borderRadius: 5, padding: 11, marginTop: 9, background: '#100d0a' }}>
+                      <h5 style={{ margin: '0 0 3px', color: '#ffad66', fontSize: 13 }}>{group.title}</h5>
+                      <div style={{ color: '#a99a8d', fontSize: 11, marginBottom: 8 }}>{group.description}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: '3px 12px' }}>
+                        {group.permissions.map(([key, label]) => (
+                          <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
+                            <input type="checkbox" checked={moduleAccess[key] === true}
+                              disabled={(['can_add_recipes','can_edit_recipes','can_delete_recipes','can_view_hidden_recipes'].includes(key)) && !moduleAccess.can_view_crafting || (['can_create_orders','can_edit_orders','can_delete_orders','can_manage_customers'].includes(key)) && !moduleAccess.can_view_orders}
+                              onChange={e => setModuleAccess(current => {
+                                const next = { ...current, [key]: e.target.checked };
+                                if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; next.can_manage_customers = false; }
+                                if (key === 'can_view_crafting' && !e.target.checked) {
+                                  next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false; next.can_view_hidden_recipes = false;
+                                }
+                                return next;
+                              })}/>
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
                 <p style={{ fontSize: 12, color: '#b9a99a' }}>Map category permissions are managed separately below.</p>
