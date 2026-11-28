@@ -118,6 +118,7 @@ BEGIN
     v_weight := v_item.unit_weight;
     IF v_item.quantity = p_quantity THEN
       DELETE FROM public.storage_items WHERE id = v_item.id;
+      v_item.id := NULL;
     ELSE
       UPDATE public.storage_items
       SET quantity = quantity - p_quantity, updated_at = NOW()
