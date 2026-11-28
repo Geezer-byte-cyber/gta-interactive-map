@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     }
 
     let canManageCustomers = ownerProfile?.role === "owner";
-    if (!canManageCustomers && (action === "createCustomer" || action === "listOrderCustomers")) {
+    if (!canManageCustomers && ["createCustomer", "listOrderCustomers", "updateCustomerPassword"].includes(action)) {
       const { data: staffAccess, error: staffAccessError } = await admin
         .from("user_module_permissions").select("can_manage_customers, can_view_orders")
         .eq("user_id", authData.user.id).maybeSingle();
@@ -161,11 +161,23 @@ Deno.serve(async (req) => {
         ? staffAccess?.can_view_orders === true
         : staffAccess?.can_manage_customers === true;
     }
-    if (ownerProfile?.role !== "owner" && !((action === "createCustomer" || action === "listOrderCustomers") && canManageCustomers)) {
+    if (ownerProfile?.role !== "owner" && !(["createCustomer", "listOrderCustomers", "updateCustomerPassword"].includes(action) && canManageCustomers)) {
       return fail("Only the owner or an authorised customer manager can perform this action", 403);
     }
 
-    if (action === "createCustomer" || action === "listOrderCustomers") {
+    if (action === "createCustomer" || action === "listOrderCustomers" || action === "updateCustomerPassword") {
+      if (action === "updateCustomerPassword") {
+        const userId = String(body.userId || "");
+        const password = String(body.password || "");
+        if (!userId) return fail("Missing customer account");
+        if (password.length < 10) return fail("Password must be at least 10 characters");
+        const { data: portalAccess, error: portalError } = await admin.from("user_module_permissions")
+          .select("can_view_own_orders").eq("user_id", userId).maybeSingle();
+        if (portalError || !portalAccess?.can_view_own_orders) return fail("That account does not have customer order access", 404);
+        const { error: passwordError } = await admin.auth.admin.updateUserById(userId, { password });
+        if (passwordError) return fail(passwordError.message);
+        return respond({ success: true });
+      }
       if (action === "listOrderCustomers") {
         const [{ data: profiles, error: profileListError }, { data: portalUsers, error: portalListError }] = await Promise.all([
           admin.from("user_profiles").select("user_id, username, account_type").order("username"),
