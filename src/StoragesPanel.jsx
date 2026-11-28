@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { Plus, X, Save, Trash2, ArrowLeft, Copy, ShieldCheck, Package, History, Minus, RefreshCw } from 'lucide-react';
+import { Plus, X, Save, Trash2, ArrowLeft, Copy, ShieldCheck, Package, History, Minus, RefreshCw, Search } from 'lucide-react';
 
 const emptyStorage = () => ({ name: '', type: 'container', capacity: '', pincode: '', description: '' });
 const emptyItem = () => ({ name: '', quantity: '1', unitWeight: '' });
@@ -238,8 +238,9 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
           <section className="storage-inventory-panel">
             <div className="storage-panel-title"><h3><Package size={17}/> Items in storage</h3><button className="outline-btn" onClick={() => loadInventory(selectedStorage)}><RefreshCw size={13}/> Refresh</button></div>
             <div className="storage-item-search">
+              <Search size={16} aria-hidden="true"/>
               <input type="search" aria-label="Search storage items" placeholder="Search items by name..." value={itemSearch} onChange={e => setItemSearch(e.target.value)} />
-              {itemSearch && <button type="button" className="outline-btn" onClick={() => setItemSearch('')}>Clear</button>}
+              {itemSearch && <button type="button" className="storage-search-clear" onClick={() => setItemSearch('')}>Clear</button>}
             </div>
             {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : !filteredItems.length ? <div className="crafting-empty">No items match “{itemSearch}”.</div> : filteredItems.map(item => {
               const row = rowActions[item.id] || { quantity: '1' };
