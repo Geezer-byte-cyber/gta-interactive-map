@@ -825,7 +825,7 @@ function App() {
       </header>
 
       {activeSection === 'crafting' && hasCraftingAccess ? (
-        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : '')} />
+        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes, canViewHidden: moduleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : '')} />
       ) : hasMapAccess ? (
       <main className="layout">
         <aside className="sidebar">
