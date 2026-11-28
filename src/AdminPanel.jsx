@@ -545,7 +545,6 @@ export default function AdminPanel({ onClose }) {
                         onChange={e => setModuleAccess(current => {
                           const next = { ...current, [key]: e.target.checked };
                           if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; }
-                          if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; }
                           if (key === 'can_view_crafting' && !e.target.checked) {
                             next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false; next.can_view_hidden_recipes = false;
                           }
