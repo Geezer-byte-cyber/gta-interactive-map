@@ -90,7 +90,7 @@ export default function CataloguePanel({ isOwner, onClose }) {
 
   return <div className="crafting-page catalogue-page">
     <div className="crafting-heading">
-      <div><div className="eyebrow">THE KNOX MAP • PRICE LIST</div><h2>Catalogue</h2><p>Browse the available items and their prices. Orders are managed separately.</p></div>
+      <div><div className="eyebrow">KNOX HQ • PRICE LIST</div><h2>Catalogue</h2><p>Browse the available items and their prices. Orders are managed separately.</p></div>
       <button className="outline-btn" onClick={onClose}><ArrowLeft size={15}/> Back</button>
     </div>
     <div className="crafting-toolbar catalogue-toolbar">
@@ -105,7 +105,7 @@ export default function CataloguePanel({ isOwner, onClose }) {
     {notice && <div className="crafting-notice">{notice}<button onClick={()=>setNotice('')}><X size={14}/></button></div>}
     {loading ? <div className="crafting-empty">Loading catalogue...</div> : visibleItems.length ? <div className="recipe-grid catalogue-grid">
       {visibleItems.map(item=><article className="recipe-card catalogue-card" key={item.id}>
-        <div className="catalogue-item-image">{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div><Package size={30}/><span>THE KNOX MAP</span></div>}</div>
+        <div className="catalogue-item-image">{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div><Package size={30}/><span>KNOX HQ</span></div>}</div>
         <div className="recipe-card-head"><div><div className="eyebrow">{categories.find(c=>c.id===item.category_id)?.name || 'CATALOGUE ITEM'}</div><h3>{item.name}</h3></div><div className="recipe-actions">{canEdit(item.category_id)&&<button className="outline-btn" onClick={()=>openEdit(item)}>Edit</button>}{canDelete(item.category_id)&&<button className="danger-icon" onClick={()=>remove(item)} title="Delete item"><Trash2 size={14}/></button>}</div></div>
         {item.description && <p className="recipe-description">{item.description}</p>}
         <div className="catalogue-price-row"><span>PRICE</span><strong>{money(item.price)}</strong></div>
