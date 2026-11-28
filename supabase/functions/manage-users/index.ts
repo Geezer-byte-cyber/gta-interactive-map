@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
             .select("user_id, category_id, can_add, can_edit, can_delete"),
           admin
             .from("user_module_permissions")
-            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders, can_view_catalogue"),
+            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders, can_view_catalogue, can_view_storages, can_add_storages, can_edit_storages, can_delete_storages"),
           admin.from("catalogue_categories").select("id, name").order("name"),
           admin.from("catalogue_category_permissions").select("user_id, category_id, can_add, can_edit, can_delete"),
         ]);
@@ -306,8 +306,8 @@ Deno.serve(async (req) => {
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
         moduleAccess: profile.role === "owner"
-          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true, can_view_catalogue: true }
-          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false }),
+          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true, can_view_catalogue: true, can_view_storages: true, can_add_storages: true, can_edit_storages: true, can_delete_storages: true }
+          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false }),
         cataloguePermissions: (catalogueCategoriesResult.data || []).map(category => {
           const permission = (cataloguePermissionsResult.data || []).find(item => item.user_id === profile.user_id && item.category_id === category.id);
           return {
@@ -447,6 +447,10 @@ Deno.serve(async (req) => {
         can_manage_customers: requested.can_view_orders === true && requested.can_manage_customers === true,
         can_view_own_orders: requested.can_view_own_orders === true,
         can_view_catalogue: requested.can_view_catalogue === true,
+        can_view_storages: !isCustomerAccount && requested.can_view_storages === true,
+        can_add_storages: !isCustomerAccount && requested.can_view_storages === true && requested.can_add_storages === true,
+        can_edit_storages: !isCustomerAccount && requested.can_view_storages === true && requested.can_edit_storages === true,
+        can_delete_storages: !isCustomerAccount && requested.can_view_storages === true && requested.can_delete_storages === true,
       };
       const { error: moduleSaveError } = await admin
         .from("user_module_permissions")
