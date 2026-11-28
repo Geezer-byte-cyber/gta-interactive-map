@@ -1081,3 +1081,43 @@ button {
 .order-financial-summary { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 9px; }
 .order-financial-summary > strong { color: #ffb16c; font-size: 19px; }
 .status-delivered { color: #8ee0a5; background: rgba(48, 160, 87, .14); border-color: rgba(48, 160, 87, .38); }
+
+
+/* Catalogue workspace — aligned with the crafting panel */
+.catalogue-page{max-width:1500px;margin:0 auto}
+.catalogue-toolbar{margin-bottom:14px}
+.catalogue-toolbar .search{flex:1;max-width:680px}
+.catalogue-category-tabs{max-width:1250px;margin:0 auto 18px;display:flex;gap:8px;flex-wrap:wrap}
+.catalogue-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#17110d;border:1px solid #59391f;border-radius:5px;color:#cdb9a8;font-size:10px;font-weight:700;cursor:pointer;transition:.18s}
+.catalogue-chip:hover,.catalogue-chip.active{background:#2a190e;border-color:#ff8a24;color:#ffad66}
+.catalogue-category-manager{max-width:1250px;margin:0 auto 17px;background:#17110d;border:1px solid #49301e;border-radius:6px;padding:11px 13px;color:#e9d8ca}
+.catalogue-category-manager summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;color:#ffad66;font-size:10px;font-weight:800;letter-spacing:.8px}
+.catalogue-category-manager summary::-webkit-details-marker{display:none}
+.catalogue-category-manager summary span{margin-left:auto;color:#a99483;font-weight:500;letter-spacing:0}
+.catalogue-category-manager>div{margin-top:10px;border-top:1px solid #392719}
+.catalogue-category-manager>div>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid #302117;font-size:11px}
+.catalogue-category-manager>div>div>span{display:flex;align-items:center;gap:7px}
+.catalogue-category-manager .outline-btn{padding:6px 8px;font-size:9px}
+.catalogue-grid{align-items:stretch}
+.catalogue-card{display:flex;flex-direction:column;gap:11px;overflow:hidden;padding:0 0 15px}
+.catalogue-item-image{height:155px;margin:0 0 2px;background:radial-gradient(ellipse at center,#382113,#100c09);border-bottom:1px solid #59391f;display:grid;place-items:center;overflow:hidden}
+.catalogue-item-image img{width:100%;height:100%;object-fit:cover}
+.catalogue-item-image>div{display:grid;justify-items:center;gap:7px;color:#8c6549}
+.catalogue-item-image>div svg{color:#ff8a24}
+.catalogue-item-image>div span{font-size:8px;letter-spacing:1.5px}
+.catalogue-card .recipe-card-head,.catalogue-card .recipe-description,.catalogue-price-row{margin-left:17px;margin-right:17px}
+.catalogue-card .recipe-card-head h3{font-size:24px}
+.catalogue-card .recipe-description{margin-top:0;margin-bottom:0;min-height:32px}
+.catalogue-price-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding:12px;background:#26170e;border:1px solid #70421f;border-radius:5px}
+.catalogue-price-row span{font-size:9px;letter-spacing:1px;color:#ffad66;font-weight:800}
+.catalogue-price-row strong{color:#fff;font-size:19px;font-variant-numeric:tabular-nums}
+.catalogue-card .recipe-actions{flex-shrink:0}
+.catalogue-add{margin:16px auto 0;display:flex;width:fit-content}
+.catalogue-modal{max-width:590px}
+.catalogue-access-field{border:1px solid #59391f;border-radius:5px;padding:12px;margin:3px 0 5px}
+.catalogue-access-field legend{padding:0 6px;color:#ffad66;font-size:9px;font-weight:800;letter-spacing:1px}
+.catalogue-access-field p{font-size:10px;color:#b9a99a;line-height:1.5;margin:0 0 10px}
+.catalogue-account-option{display:flex!important;align-items:center;grid-template-columns:none!important;gap:9px!important;padding:7px 0;border-top:1px solid #302117;font-size:11px!important}
+.catalogue-account-option input{width:auto!important;accent-color:#ff8a24}
+.catalogue-account-option span{font-size:8px;padding:3px 6px;border-radius:4px}
+@media(max-width:600px){.catalogue-page{padding:20px 12px}.catalogue-category-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px}.catalogue-chip{white-space:nowrap;flex:none}.catalogue-toolbar{flex-direction:column;align-items:stretch}.catalogue-toolbar .search{max-width:none}.catalogue-item-image{height:135px}.catalogue-category-manager>div>div{align-items:flex-start}}
