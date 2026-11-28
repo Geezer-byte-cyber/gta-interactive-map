@@ -154,10 +154,12 @@ Deno.serve(async (req) => {
     let canManageCustomers = ownerProfile?.role === "owner";
     if (!canManageCustomers && (action === "createCustomer" || action === "listOrderCustomers")) {
       const { data: staffAccess, error: staffAccessError } = await admin
-        .from("user_module_permissions").select("can_manage_customers")
+        .from("user_module_permissions").select("can_manage_customers, can_view_orders")
         .eq("user_id", authData.user.id).maybeSingle();
       if (staffAccessError) return fail("Could not verify customer-management permission", 500);
-      canManageCustomers = staffAccess?.can_manage_customers === true;
+      canManageCustomers = action === "listOrderCustomers"
+        ? staffAccess?.can_view_orders === true
+        : staffAccess?.can_manage_customers === true;
     }
     if (ownerProfile?.role !== "owner" && !((action === "createCustomer" || action === "listOrderCustomers") && canManageCustomers)) {
       return fail("Only the owner or an authorised customer manager can perform this action", 403);
