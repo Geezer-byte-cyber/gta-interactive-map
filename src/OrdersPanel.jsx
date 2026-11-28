@@ -64,12 +64,13 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
       : await supabase.from('orders').insert({ ...payload, status: 'New', created_by: (await supabase.auth.getUser()).data.user?.id });
     setSaving(false);
     if (error) { setNotice(error.message); return; }
+    if (editingOrderId) setSelected(current => current?.id === editingOrderId ? { ...current, ...payload } : current);
     setEditing(false); setEditingOrderId(null); setNotice(editingOrderId ? 'Order updated.' : 'Order created.'); await load();
   };
 
   const changeStatus = async (order, status) => {
     const { error } = await supabase.from('orders').update({ status }).eq('id', order.id);
-    if (error) setNotice(error.message); else { setNotice('Order status updated.'); await load(); }
+    if (error) setNotice(error.message); else { setSelected({ ...order, status }); setNotice('Order status updated.'); await load(); }
   };
 
   const deleteOrder = async order => {
