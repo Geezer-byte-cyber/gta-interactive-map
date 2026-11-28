@@ -89,9 +89,6 @@ BEGIN
       v_weight := ROUND(p_unit_weight, 3);
     ELSE
       v_weight := v_item.unit_weight;
-      IF p_unit_weight IS NOT NULL AND ROUND(p_unit_weight, 3) <> v_weight THEN
-        RAISE EXCEPTION 'This item already exists with a different unit weight. Edit the existing item weight before adding more.';
-      END IF;
     END IF;
 
     SELECT COALESCE(SUM(quantity * unit_weight), 0) INTO v_current_weight
