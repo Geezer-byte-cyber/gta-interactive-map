@@ -1064,3 +1064,5 @@ button {
 .account-type-badge{display:inline-block;padding:3px 6px;border-radius:4px;font-size:9px;letter-spacing:.8px;margin-left:5px}
 .customer-badge{background:#39261d;color:#ffbd8a;border:1px solid #86512c}.knox-badge{background:#1d2924;color:#9bd7a2;border:1px solid #416b48}
 @media(max-width:760px){.orders-heading{align-items:flex-start;flex-direction:column}.orders-layout{grid-template-columns:1fr}.orders-list{max-height:300px}.orders-toolbar{flex-wrap:wrap}.orders-toolbar .search{max-width:none;flex-basis:100%}}
+
+.customer-portal-toggle{display:flex;align-items:center;gap:8px;color:#d5c4b5;font-size:11px}.customer-portal-toggle input{accent-color:#ff8a24}
