@@ -1066,3 +1066,8 @@ button {
 @media(max-width:760px){.orders-heading{align-items:flex-start;flex-direction:column}.orders-layout{grid-template-columns:1fr}.orders-list{max-height:300px}.orders-toolbar{flex-wrap:wrap}.orders-toolbar .search{max-width:none;flex-basis:100%}}
 
 .customer-portal-toggle{display:flex;align-items:center;gap:8px;color:#d5c4b5;font-size:11px}.customer-portal-toggle input{accent-color:#ff8a24}
+
+.order-customer-list{background:#17120e;border:1px solid #49301e;border-radius:7px;padding:12px;margin-bottom:15px;max-width:700px}
+.order-customer-list h3{margin:0 0 8px;color:#ffad66;font-size:12px}
+.order-customer-account{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #30251d;font-size:11px}
+.order-head-actions{display:flex;align-items:center;gap:8px}
