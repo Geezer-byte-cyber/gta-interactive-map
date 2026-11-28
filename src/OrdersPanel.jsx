@@ -94,6 +94,18 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
     if (error) setNotice(error.message); else { setNoteDraft(''); await loadNotes(selected); }
   };
 
+  const resetCustomerPassword = async customer => {
+    const password = window.prompt(`Set a new password for ${customer.username} (minimum 10 characters):`);
+    if (password === null) return;
+    if (password.length < 10) { setNotice('Password must be at least 10 characters.'); return; }
+    setSaving(true);
+    try {
+      await invoke({ action: 'updateCustomerPassword', userId: customer.user_id, password });
+      setNotice(`Password updated for ${customer.username}.`);
+    } catch (error) { setNotice(error.message); }
+    setSaving(false);
+  };
+
   const createCustomer = async e => {
     e.preventDefault(); setSaving(true);
     try {
@@ -111,6 +123,7 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
     <div className="orders-toolbar"><label className="search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..."/></label><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select><button className="small-btn" onClick={load}><RefreshCw size={13}/> Refresh</button></div>
     {notice && <div className="crafting-notice">{notice}<button onClick={() => setNotice('')}><X size={14}/></button></div>}
     {showCustomerForm && canManageCustomers && <form className="order-customer-form" onSubmit={createCustomer}><h3>Create customer login</h3><p>Customers can only view orders assigned to their account.</p><input required minLength="3" maxLength="24" value={customerForm.username} onChange={e => setCustomerForm(v => ({...v, username:e.target.value}))} placeholder="Customer username"/><input required minLength="10" type="password" value={customerForm.password} onChange={e => setCustomerForm(v => ({...v,password:e.target.value}))} placeholder="Temporary password (10+ characters)"/><label className="customer-portal-toggle"><input type="checkbox" checked={customerForm.enablePortal} onChange={e => setCustomerForm(v => ({...v,enablePortal:e.target.checked}))}/> Allow this account to view its assigned orders (optional)</label><button className="primary" disabled={saving}>Create customer</button></form>}
+    {!isCustomer && canManageCustomers && customers.length > 0 && <div className="order-customer-list"><h3>Customer accounts</h3>{customers.map(customer => <div className="order-customer-account" key={customer.user_id}><strong>{customer.username} <span className={customer.account_type === 'customer' ? 'account-type-badge customer-badge' : 'account-type-badge knox-badge'}>{customer.account_type === 'customer' ? 'CUSTOMER' : 'KNOX'}</span></strong><button className="small-btn" disabled={saving} onClick={() => resetCustomerPassword(customer)}>Reset password</button></div>)}</div>}
     {loading ? <div className="crafting-empty">Loading orders…</div> : <div className="orders-layout">
       <div className="orders-list">{filtered.map(order => <button key={order.id} className={selected?.id === order.id ? 'order-row selected' : 'order-row'} onClick={() => {setSelected(order); if (!isCustomer) loadNotes(order);}}><span className="order-ticket">{(order.order_number ? `KX-${String(order.order_number).padStart(6, '0')}` : 'TICKET')}</span><strong>{order.title}</strong><small>{!isCustomer && <>{customerFor(order.customer_user_id)?.username || 'Customer'} <span className={customerFor(order.customer_user_id)?.account_type === 'customer' ? 'account-type-badge customer-badge' : 'account-type-badge knox-badge'}>{customerFor(order.customer_user_id)?.account_type === 'customer' ? 'CUSTOMER' : 'KNOX'}</span> · </>}{new Date(order.created_at).toLocaleDateString()}</small><span className={`order-status status-${order.status.toLowerCase().replaceAll(' ', '-')}`}>{order.status}</span></button>)}{!filtered.length && <div className="crafting-empty">No orders found.</div>}</div>
       <div className="order-detail">{selected && orders.some(o => o.id === selected.id) ? <><div className="order-detail-head"><div><div className="eyebrow">{(selected.order_number ? `KX-${String(selected.order_number).padStart(6, '0')}` : 'ORDER TICKET')}</div><h3>{selected.title}</h3><span className={`order-status status-${selected.status.toLowerCase().replaceAll(' ', '-')}`}>{selected.status}</span></div><div className="order-head-actions">{canEdit && <button className="small-btn" onClick={() => openEdit(selected)}>Edit order</button>}{canDelete && <button className="danger-icon" onClick={() => deleteOrder(selected)} title="Delete order"><Trash2 size={15}/></button>}</div></div>
