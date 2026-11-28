@@ -430,10 +430,11 @@ Deno.serve(async (req) => {
       const requested = (body.moduleAccess && typeof body.moduleAccess === "object")
         ? body.moduleAccess as Record<string, unknown>
         : {};
-      const canViewCrafting = requested.can_view_crafting === true;
+      const isCustomerAccount = body.accountType === "customer";
+      const canViewCrafting = !isCustomerAccount && requested.can_view_crafting === true;
       const moduleRow = {
         user_id: userId,
-        can_view_map: requested.can_view_map === true,
+        can_view_map: !isCustomerAccount && requested.can_view_map === true,
         can_view_crafting: canViewCrafting,
         can_add_recipes: canViewCrafting && requested.can_add_recipes === true,
         can_edit_recipes: canViewCrafting && requested.can_edit_recipes === true,
@@ -460,7 +461,6 @@ Deno.serve(async (req) => {
       const requestedCatalogue = Array.isArray(body.cataloguePermissions)
         ? body.cataloguePermissions as Array<Record<string, unknown>>
         : [];
-      const isCustomerAccount = body.accountType === "customer";
       for (const item of requestedCatalogue) {
         const categoryId = String(item.categoryId || "");
         if (!validCatalogueIds.has(categoryId)) return fail("One of the selected catalogue categories is invalid");
