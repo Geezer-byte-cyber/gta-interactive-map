@@ -149,11 +149,11 @@ function App() {
   // Keep the last open panel across browser tab suspension and full page reloads.
   // Store it per account so one user never inherits another user's last section.
   useEffect(() => {
-    if (!session?.user?.id || !profile || !activeSection) return;
+    if (!session?.user?.id || !profile || !activeSection || isPreview) return;
     try {
       localStorage.setItem(`knox-last-section-${session.user.id}`, activeSection);
     } catch {}
-  }, [activeSection, session?.user?.id, profile]);
+  }, [activeSection, session?.user?.id, profile, isPreview]);
 
   const visiblePins = useMemo(
     () => pins.filter(p => canView(p.category) && !hiddenCategoryIds.includes(categories.find(c => c.name === p.category)?.id)),
