@@ -231,8 +231,8 @@ export default function AdminPanel({ onClose }) {
         accountType: accountMarker
       });
 
-      setNotice('User permissions saved successfully.');
       await loadUsers();
+      setNotice('Permissions updated successfully.');
     } catch (error) {
       setNotice(error.message);
     }
