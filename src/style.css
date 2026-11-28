@@ -1121,3 +1121,48 @@ button {
 .catalogue-account-option input{width:auto!important;accent-color:#ff8a24}
 .catalogue-account-option span{font-size:8px;padding:3px 6px;border-radius:4px}
 @media(max-width:600px){.catalogue-page{padding:20px 12px}.catalogue-category-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px}.catalogue-chip{white-space:nowrap;flex:none}.catalogue-toolbar{flex-direction:column;align-items:stretch}.catalogue-toolbar .search{max-width:none}.catalogue-item-image{height:135px}.catalogue-category-manager>div>div{align-items:flex-start}}
+
+
+/* Storage inventory and movement ledger */
+.storage-card{cursor:pointer;transition:border-color .16s,transform .16s}
+.storage-card:hover,.storage-card:focus-visible{border-color:#ff8a24;transform:translateY(-2px);outline:none}
+.storage-open-hint{display:flex;align-items:center;gap:7px;margin-top:15px;padding-top:12px;border-top:1px solid #49301e;color:#ffad66;font-size:9px;font-weight:800;letter-spacing:.8px}
+.storage-capacity{max-width:1250px;margin:0 auto 17px;padding:17px;background:#17110d;border:1px solid #59391f;border-radius:7px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.storage-capacity>div:not(.storage-capacity-bar){display:grid;gap:5px}
+.storage-capacity>div>span{font-size:9px;letter-spacing:1px;color:#ffad66;font-weight:800}
+.storage-capacity>div>strong{font-size:21px;color:#f5eee8;font-variant-numeric:tabular-nums}
+.storage-capacity .storage-over-capacity{color:#ff7777}
+.storage-capacity-bar{grid-column:1/-1;height:7px;border-radius:8px;background:#302117;overflow:hidden}
+.storage-capacity-bar span{display:block;height:100%;background:#ff8a24;border-radius:8px;transition:width .2s}
+.storage-inventory-layout{max-width:1250px;margin:auto;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);gap:15px;align-items:start}
+.storage-inventory-panel,.storage-history-panel{background:#17110d;border:1px solid #49301e;border-radius:7px;padding:15px;min-width:0}
+.storage-panel-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.storage-panel-title h3{display:flex;align-items:center;gap:8px;margin:0;color:#ffad66;font:700 19px 'Barlow Condensed',sans-serif}
+.storage-panel-title .outline-btn{padding:6px 8px}
+.storage-item-row{padding:12px 0;border-top:1px solid #392719;display:grid;gap:10px}
+.storage-item-info{display:grid;gap:4px}
+.storage-item-info strong{color:#f5eee8;font-size:13px}
+.storage-item-info span{color:#b9a99a;font-size:10px}
+.storage-item-controls{display:flex;align-items:center;gap:7px}
+.storage-item-controls select,.storage-item-controls input{min-width:0;background:#0c0907;color:#f5eee8;border:1px solid #59391f;border-radius:4px;padding:8px;font-size:11px}
+.storage-item-controls select{flex:1}
+.storage-item-controls input{width:75px}
+.storage-item-controls .small-btn{white-space:nowrap;text-transform:capitalize}
+.storage-add-form{display:grid;gap:10px;margin-top:15px;padding:14px;background:#100c09;border:1px solid #59391f;border-radius:6px}
+.storage-add-form h4{display:flex;align-items:center;gap:7px;margin:0;color:#ffad66;font-size:12px}
+.storage-add-form label{display:grid;gap:6px;color:#d5c2b4;font-size:10px;font-weight:600}
+.storage-add-form input{width:100%;min-width:0;background:#0c0907;color:#f5eee8;border:1px solid #59391f;border-radius:4px;padding:9px;font-size:12px}
+.storage-add-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.storage-form-hint{margin:0;color:#a99889;font-size:10px;line-height:1.5}
+.storage-add-form .primary{justify-self:start}
+.storage-history-empty{color:#a99889;font-size:11px}
+.storage-movement{display:flex;gap:10px;padding:10px 0;border-top:1px solid #392719}
+.storage-movement>span{flex:none;min-width:38px;height:28px;display:grid;place-items:center;border-radius:4px;font-size:11px;font-weight:800}
+.storage-movement-add{background:#163020;color:#91dda3}
+.storage-movement-remove{background:#351a16;color:#ff9c88}
+.storage-movement>div{min-width:0;display:grid;gap:4px}
+.storage-movement strong{font-size:11px;color:#f5eee8}
+.storage-movement span:not(:first-child){font-size:9px;color:#b9a99a}
+.storage-movement small{font-size:9px;color:#8e7d70}
+@media(max-width:850px){.storage-inventory-layout{grid-template-columns:1fr}}
+@media(max-width:520px){.storage-capacity{padding:12px;gap:8px}.storage-capacity>div>strong{font-size:17px}.storage-item-controls{flex-wrap:wrap}.storage-item-controls select{min-width:110px}.storage-add-fields{grid-template-columns:1fr 1fr}}
