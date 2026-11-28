@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
         return respond({ catalogueCategories: categories || [], customers: (profiles || []).map(item => {
           const module = (modules || []).find(row => row.user_id === item.user_id);
           const allowedIds = new Set((categoryRows || []).filter(row => row.user_id === item.user_id).map(row => row.category_id));
-          return { ...item, canViewCatalogue: module?.can_view_catalogue === true, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
+          return { ...item, canViewCatalogue: module?.can_view_catalogue === true, canViewOwnOrders: module?.can_view_own_orders === true, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
         }) });
       }
       const username = String(body.username || "").trim().toLowerCase();
