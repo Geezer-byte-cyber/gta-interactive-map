@@ -251,7 +251,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
               <label>Item name<input required value={itemDraft.name} onChange={e => setItemDraft(current => ({ ...current, name: e.target.value }))} placeholder="e.g. Metal scraps"/></label>
               <div className="storage-add-fields">
                 <label>Quantity<input required type="number" min="1" step="1" value={itemDraft.quantity} onChange={e => setItemDraft(current => ({ ...current, quantity: e.target.value }))}/></label>
-                <label>Weight per item<input required type="number" min="0" step="1" value={itemDraft.unitWeight} onChange={e => setItemDraft(current => ({ ...current, unitWeight: e.target.value }))} placeholder="e.g. 2.5"/></label>
+                <label>Weight per item<input required type="number" min="0" step="1" value={itemDraft.unitWeight} onChange={e => setItemDraft(current => ({ ...current, unitWeight: e.target.value }))} placeholder="e.g. 2"/></label>
               </div>
               <p className="storage-form-hint">If this item name already exists, its existing unit weight is kept and the quantity is combined.</p>
               <button className="primary" disabled={itemBusy}><Plus size={14}/>{itemBusy ? 'Saving...' : 'Add to storage'}</button>
