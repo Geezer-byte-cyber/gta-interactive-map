@@ -829,7 +829,7 @@ function App() {
       </header>
 
       {activeSection === 'crafting' && hasCraftingAccess ? (
-        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes, canViewHidden: moduleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : '')} />
+        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes, canViewHidden: moduleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : ''))} />
       ) : activeSection === 'orders' && (hasOrdersAccess || hasOwnOrdersAccess) ? (
         <OrdersPanel isCustomer={!isOwner && !hasOrdersAccess && hasOwnOrdersAccess} canManage={isOwner || hasOrdersAccess} canCreate={isOwner || moduleAccess?.can_create_orders === true} canEdit={isOwner || moduleAccess?.can_edit_orders === true} canDelete={isOwner || moduleAccess?.can_delete_orders === true} canManageCustomers={isOwner || moduleAccess?.can_manage_customers === true} username={profile?.username || ''} />
       ) : hasMapAccess ? (
