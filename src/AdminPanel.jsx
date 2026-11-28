@@ -61,7 +61,7 @@ const secondaryStyle = {
   border: '1px solid #59391f'
 };
 
-export default function AdminPanel({ onClose }) {
+export default function AdminPanel({ onClose, onPreview }) {
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [catalogueCategories, setCatalogueCategories] = useState([]);
@@ -491,6 +491,7 @@ export default function AdminPanel({ onClose }) {
                       <ShieldCheck size={14}/>
                       {selectedId === user.user_id ? 'Close permissions' : 'Permissions'}
                     </button>
+                    {user.role !== 'owner' && <button style={secondaryStyle} onClick={() => onPreview?.(user)} title={`Preview Knox HQ as ${user.username}`}>View as</button>}
 
                     {user.role !== 'owner' && (
                       <button
