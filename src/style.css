@@ -1071,3 +1071,13 @@ button {
 .order-customer-list h3{margin:0 0 8px;color:#ffad66;font-size:12px}
 .order-customer-account{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #30251d;font-size:11px}
 .order-head-actions{display:flex;align-items:center;gap:8px}
+
+
+/* Order payment and delivery indicators */
+.order-ticket-money { color: #ffd2a8; font-size: 12px; font-weight: 800; margin-top: 3px; }
+.payment-status { display: inline-flex; align-items: center; width: fit-content; border-radius: 999px; padding: 4px 8px; font-size: 9px; font-weight: 800; letter-spacing: .07em; }
+.payment-awaiting_payment { color: #ffd08a; background: rgba(210, 139, 39, .16); border: 1px solid rgba(210, 139, 39, .38); }
+.payment-paid { color: #8ee0a5; background: rgba(48, 160, 87, .14); border: 1px solid rgba(48, 160, 87, .38); }
+.order-financial-summary { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 9px; }
+.order-financial-summary > strong { color: #ffb16c; font-size: 19px; }
+.status-delivered { color: #8ee0a5; background: rgba(48, 160, 87, .14); border-color: rgba(48, 160, 87, .38); }
