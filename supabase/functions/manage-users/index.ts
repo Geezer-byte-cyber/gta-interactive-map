@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
 
     // LIST USERS, CATEGORIES AND PERMISSIONS
     if (action === "list") {
-      const [profilesResult, categoriesResult, permissionsResult, moduleResult, catalogueCategoriesResult, cataloguePermissionsResult] =
+      const [profilesResult, categoriesResult, permissionsResult, moduleResult, catalogueCategoriesResult, cataloguePermissionsResult, storageAccessResult] =
         await Promise.all([
           admin
             .from("user_profiles")
@@ -306,6 +306,7 @@ Deno.serve(async (req) => {
             .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders, can_view_catalogue, can_view_storages, can_add_storages, can_edit_storages, can_delete_storages"),
           admin.from("catalogue_categories").select("id, name").order("name"),
           admin.from("catalogue_category_permissions").select("user_id, category_id, can_add, can_edit, can_delete"),
+          admin.from("storage_user_access").select("user_id, storage_id"),
         ]);
 
       if (profilesResult.error) {
@@ -326,13 +327,14 @@ Deno.serve(async (req) => {
         console.error("Module permissions query failed:", moduleResult.error.message);
         return fail("Could not load section permissions", 500);
       }
-      if (catalogueCategoriesResult.error || cataloguePermissionsResult.error) {
-        console.error("Catalogue permissions query failed:", catalogueCategoriesResult.error?.message || cataloguePermissionsResult.error?.message);
+      if (catalogueCategoriesResult.error || cataloguePermissionsResult.error || storageAccessResult.error) {
+        console.error("Admin permissions query failed:", catalogueCategoriesResult.error?.message || cataloguePermissionsResult.error?.message || storageAccessResult.error?.message);
         return fail("Could not load catalogue permissions", 500);
       }
 
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
+        storageIds: (storageAccessResult.data || []).filter(row => row.user_id === profile.user_id).map(row => row.storage_id),
         moduleAccess: profile.role === "owner"
           ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true, can_view_catalogue: true, can_view_storages: true, can_add_storages: true, can_edit_storages: true, can_delete_storages: true }
           : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false }),
