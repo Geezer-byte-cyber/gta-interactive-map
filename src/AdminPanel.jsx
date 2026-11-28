@@ -66,6 +66,7 @@ export default function AdminPanel({ onClose }) {
   const [categories, setCategories] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [permissions, setPermissions] = useState([]);
+  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false });
 
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -126,6 +127,7 @@ export default function AdminPanel({ onClose }) {
       return;
     }
 
+    setModuleAccess(selectedUser.moduleAccess || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false });
     setPermissions(
       categories.map(category => {
         const existing = selectedUser.permissions?.find(
@@ -210,7 +212,8 @@ export default function AdminPanel({ onClose }) {
       await invoke({
         action: 'updatePermissions',
         userId: selectedUser.user_id,
-        permissions
+        permissions,
+        moduleAccess
       });
 
       setNotice('User permissions saved successfully.');
@@ -505,6 +508,29 @@ export default function AdminPanel({ onClose }) {
               <p>The owner automatically has full access to every category.</p>
             ) : (
               <>
+                <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '12px 0 18px' }}>
+                  <h4 style={{ margin: '0 0 10px', color: '#ffad66' }}>Website section access</h4>
+                  {[
+                    ['can_view_map', 'View Map'],
+                    ['can_view_crafting', 'View Crafting'],
+                    ['can_add_recipes', 'Add recipes'],
+                    ['can_edit_recipes', 'Edit recipes'],
+                    ['can_delete_recipes', 'Delete recipes']
+                  ].map(([key, label]) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
+                      <input type="checkbox" checked={moduleAccess[key] === true}
+                        disabled={key.endsWith('_recipes') && key !== 'can_view_crafting' && !moduleAccess.can_view_crafting}
+                        onChange={e => setModuleAccess(current => {
+                          const next = { ...current, [key]: e.target.checked };
+                          if (key === 'can_view_crafting' && !e.target.checked) {
+                            next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false;
+                          }
+                          return next;
+                        })}/>
+                      {label}
+                    </label>
+                  ))}
+                </div>
                 <p style={{
                   fontSize: 12,
                   color: '#b9a99a'
