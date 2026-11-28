@@ -127,7 +127,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $storage_check$
   SELECT EXISTS (
     SELECT 1
     FROM public.storages s
@@ -138,7 +138,7 @@ AS $
       AND p.role <> 'owner'
       AND m.can_view_storages = TRUE AND m.can_add_storages = TRUE
   );
-$;
+$storage_check$;
 
 DROP POLICY IF EXISTS storage_user_access_insert ON public.storage_user_access;
 CREATE POLICY storage_user_access_insert ON public.storage_user_access
