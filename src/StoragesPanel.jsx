@@ -80,9 +80,9 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
     let storageId = editing;
     let error;
     if (editing === 'new') {
-      const result = await supabase.from('storages').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id }).select('id').single();
+      storageId = crypto.randomUUID();
+      const result = await supabase.from('storages').insert({ id: storageId, ...payload, created_by: (await supabase.auth.getUser()).data.user?.id });
       error = result.error;
-      storageId = result.data?.id;
     } else {
       const result = await supabase.from('storages').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editing);
       error = result.error;
