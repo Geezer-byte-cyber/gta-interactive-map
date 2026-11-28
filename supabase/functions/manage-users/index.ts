@@ -298,6 +298,10 @@ Deno.serve(async (req) => {
         console.error("Module permissions query failed:", moduleResult.error.message);
         return fail("Could not load section permissions", 500);
       }
+      if (catalogueCategoriesResult.error || cataloguePermissionsResult.error) {
+        console.error("Catalogue permissions query failed:", catalogueCategoriesResult.error?.message || cataloguePermissionsResult.error?.message);
+        return fail("Could not load catalogue permissions", 500);
+      }
 
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
@@ -339,6 +343,7 @@ Deno.serve(async (req) => {
         success: true,
         users,
         categories: categoriesResult.data || [],
+        catalogueCategories: catalogueCategoriesResult.data || [],
       });
     }
 
