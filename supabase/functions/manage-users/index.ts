@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
           return {
             categoryId: category.id,
             categoryName: category.name,
-            canView: profile.role === "owner" || !!permission,
+            canView: profile.role === "owner" || (profile.account_type === "customer" && !!permission),
             canAdd: profile.role === "owner" || !!permission?.can_add,
             canEdit: profile.role === "owner" || !!permission?.can_edit,
             canDelete: profile.role === "owner" || !!permission?.can_delete,
@@ -444,7 +444,8 @@ Deno.serve(async (req) => {
         can_edit_orders: requested.can_view_orders === true && requested.can_edit_orders === true,
         can_delete_orders: requested.can_view_orders === true && requested.can_delete_orders === true,
         can_manage_customers: requested.can_view_orders === true && requested.can_manage_customers === true,
-        can_view_own_orders: requested.can_view_own_orders === true,\n        can_view_catalogue: requested.can_view_catalogue === true,
+        can_view_own_orders: requested.can_view_own_orders === true,
+        can_view_catalogue: requested.can_view_catalogue === true,
       };
       const { error: moduleSaveError } = await admin
         .from("user_module_permissions")
