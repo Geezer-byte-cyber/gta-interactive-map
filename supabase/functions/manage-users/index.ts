@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
         can_create_orders: requested.can_view_orders === true && requested.can_create_orders === true,
         can_edit_orders: requested.can_view_orders === true && requested.can_edit_orders === true,
         can_delete_orders: requested.can_view_orders === true && requested.can_delete_orders === true,
-        can_manage_customers: requested.can_manage_customers === true,
+        can_manage_customers: requested.can_view_orders === true && requested.can_manage_customers === true,
         can_view_own_orders: requested.can_view_own_orders === true,
       };
       const { error: moduleSaveError } = await admin
