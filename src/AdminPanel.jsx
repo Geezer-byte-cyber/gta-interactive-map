@@ -525,7 +525,13 @@ export default function AdminPanel({ onClose }) {
             </h3>
 
             <label style={{ display: 'block', margin: '10px 0', fontSize: 12 }}>Account marker (visual only)
-              <select style={inputStyle} value={accountMarker} onChange={e => setAccountMarker(e.target.value)} disabled={selectedUser.role === 'owner'}><option value="knox">Knox</option><option value="customer">Customer</option></select>
+              <select style={inputStyle} value={accountMarker} onChange={e => {
+                const nextType = e.target.value;
+                setAccountMarker(nextType);
+                if (nextType === 'customer') {
+                  setModuleAccess(current => ({ ...current, can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false }));
+                }
+              }} disabled={selectedUser.role === 'owner'}><option value="knox">Knox</option><option value="customer">Customer</option></select>
             </label>
 
             {selectedUser.role === 'owner' ? (
@@ -539,7 +545,7 @@ export default function AdminPanel({ onClose }) {
                     { title: 'Crafting panel', description: 'Manage crafting recipes and hidden recipe visibility.', permissions: [['can_view_crafting', 'View Crafting'], ['can_add_recipes', 'Add recipes'], ['can_edit_recipes', 'Edit recipes'], ['can_delete_recipes', 'Delete recipes'], ['can_view_hidden_recipes', 'View hidden recipes']] },
                     { title: 'Orders panel', description: 'Manage the order desk and customer order portal.', permissions: [['can_view_orders', 'View Orders desk'], ['can_create_orders', 'Create orders'], ['can_edit_orders', 'Edit orders / update status'], ['can_delete_orders', 'Delete orders'], ['can_manage_customers', 'Create customer accounts'], ['can_view_own_orders', 'Customer portal: view assigned orders']] },
                     { title: 'Catalogue panel', description: 'Access to the catalogue and its price list.', permissions: [['can_view_catalogue', 'View Catalogue']] }
-                  ].map(group => (
+                  ].filter(group => accountMarker !== 'customer' || !['Map panel', 'Crafting panel'].includes(group.title)).map(group => (
                     <div key={group.title} style={{ border: '1px solid #49301e', borderRadius: 5, padding: 11, marginTop: 9, background: '#100d0a' }}>
                       <h5 style={{ margin: '0 0 3px', color: '#ffad66', fontSize: 13 }}>{group.title}</h5>
                       <div style={{ color: '#a99a8d', fontSize: 11, marginBottom: 8 }}>{group.description}</div>
