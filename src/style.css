@@ -1023,3 +1023,44 @@ button {
 .no-sections h2{color:#ff8a24;font-family:'Barlow Condensed',sans-serif}
 .no-sections p{font-size:12px}
 @media(max-width:600px){.crafting-page{padding:20px 12px}.crafting-heading h2{font-size:28px}.crafting-toolbar{align-items:stretch;flex-direction:column}.crafting-toolbar .search{max-width:none}.recipe-form-row{grid-template-columns:1fr 105px}.ingredient-form-row{grid-template-columns:minmax(0,1fr) 80px 32px}}
+
+
+/* Orders and customer ticket desk */
+.orders-page{padding:30px clamp(16px,4vw,54px);max-width:1500px;margin:auto;color:#f5eee8;min-height:calc(100vh - 90px)}
+.orders-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}
+.orders-heading h2{font-family:'Barlow Condensed',sans-serif;font-size:34px;margin:4px 0;color:#fff}
+.orders-heading p,.order-customer-line,.order-description{color:#b9a99a;font-size:12px}
+.orders-heading-actions{display:flex;gap:9px;flex-wrap:wrap}
+.orders-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+.orders-toolbar .search{flex:1;max-width:500px}
+.orders-toolbar select,.order-status-control select,.order-customer-form input,.orders-page input,.orders-page textarea,.orders-page select{background:#0c0907;color:#f5eee8;border:1px solid #59391f;border-radius:5px;padding:10px;min-width:0}
+.orders-layout{display:grid;grid-template-columns:minmax(260px,390px) minmax(0,1fr);gap:16px;min-height:480px}
+.orders-list,.order-detail,.order-customer-form{background:#17120e;border:1px solid #49301e;border-radius:8px;padding:13px}
+.orders-list{display:flex;flex-direction:column;gap:7px;max-height:70vh;overflow:auto}
+.order-row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;text-align:left;background:#100d0a;color:#f5eee8;border:1px solid #392719;border-radius:6px;padding:12px;cursor:pointer}
+.order-row.selected{border-color:#ff8a24;background:#21160e}
+.order-ticket{font-size:9px;color:#ffad66;letter-spacing:1px}
+.order-row strong{font-size:13px;grid-column:1}
+.order-row small{font-size:10px;color:#a99889;grid-column:1}
+.order-status{display:inline-flex;align-items:center;border:1px solid #684321;color:#ffc083;border-radius:20px;padding:4px 8px;font-size:9px;white-space:nowrap}
+.order-row .order-status{grid-column:2;grid-row:1/4;align-self:center}
+.status-completed{color:#9bd7a2;border-color:#416b48}.status-cancelled{color:#e59a9a;border-color:#784242}.status-in-progress{color:#8ec7ff;border-color:#345b7d}
+.order-detail{padding:20px;min-height:300px}
+.order-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.order-detail h3{font-size:23px;margin:5px 0 10px}
+.order-detail h4{display:flex;align-items:center;gap:7px;color:#ffad66;font-size:12px;margin:22px 0 10px}
+.order-items{display:grid;gap:7px}
+.order-items>div{display:flex;justify-content:space-between;background:#100d0a;padding:10px;border-radius:4px;font-size:12px}
+.order-status-control{display:flex;gap:12px;align-items:center;margin-top:20px;font-size:11px;color:#c9b8a9}
+.order-notes{border-top:1px solid #49301e;margin-top:25px;padding-top:8px}
+.order-notes>p{font-size:10px;color:#9c8a7b}
+.order-notes textarea{width:100%;box-sizing:border-box;min-height:65px;margin:8px 0}
+.order-note{background:#100d0a;border-left:2px solid #ff8a24;padding:9px;margin:7px 0;font-size:11px}
+.order-note small{display:block;color:#9c8a7b;margin-top:6px}
+.orders-placeholder,.crafting-empty{text-align:center;padding:45px 12px;color:#a99889;font-size:12px}
+.order-customer-form{display:grid;gap:10px;margin-bottom:15px;max-width:520px}
+.order-customer-form h3,.order-customer-form p{margin:0}
+.order-customer-form p{font-size:11px;color:#b9a99a}
+.account-type-badge{display:inline-block;padding:3px 6px;border-radius:4px;font-size:9px;letter-spacing:.8px;margin-left:5px}
+.customer-badge{background:#39261d;color:#ffbd8a;border:1px solid #86512c}.knox-badge{background:#1d2924;color:#9bd7a2;border:1px solid #416b48}
+@media(max-width:760px){.orders-heading{align-items:flex-start;flex-direction:column}.orders-layout{grid-template-columns:1fr}.orders-list{max-height:300px}.orders-toolbar{flex-wrap:wrap}.orders-toolbar .search{max-width:none;flex-basis:100%}}
