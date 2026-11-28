@@ -111,7 +111,7 @@ function App() {
   const effectiveProfile = previewUser ? { ...profile, username: previewUser.username, role: 'user', account_type: previewUser.account_type } : profile;
   const effectiveModuleAccess = previewUser ? previewUser.moduleAccess : moduleAccess;
   const effectivePermissions = previewUser
-    ? (previewUser.permissions || []).map(p => ({ category_id: p.categoryId, category_name: p.categoryName, can_add: false, can_edit: false, can_delete: false }))
+    ? (previewUser.permissions || []).filter(p => p.canView).map(p => ({ category_id: p.categoryId, category_name: p.categoryName, can_add: false, can_edit: false, can_delete: false }))
     : permissions;
   const isSignedIn = !!session && !!profile;
   const hasMapAccess = isOwner || effectiveModuleAccess?.can_view_map === true;
@@ -196,6 +196,7 @@ function App() {
           setProfile(null);
           setPermissions([]);
           setModuleAccess(null);
+          setPreviewUser(null);
           setActiveSection('map');
           setAdminOpen(false);
           return;
