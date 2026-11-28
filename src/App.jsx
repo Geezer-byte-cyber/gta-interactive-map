@@ -224,7 +224,8 @@ function App() {
       const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false };
       setModuleAccess(access);
       const mapAllowed = profileData.role === 'owner' || access.can_view_map === true;
-      if (profileData.role !== 'owner' && !access.can_view_crafting) setActiveSection('map');
+      setActiveSection(mapAllowed ? 'map' : (profileData.role === 'owner' || access.can_view_crafting ? 'crafting' : ''));
+
       const { data: categoryData, error: categoryError } = mapAllowed
         ? await supabase.from('map_categories').select('*').order('name')
         : { data: [], error: null };
