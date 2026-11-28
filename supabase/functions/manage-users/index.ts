@@ -151,8 +151,41 @@ Deno.serve(async (req) => {
       return fail("Could not verify account permissions", 500);
     }
 
-    if (ownerProfile?.role !== "owner") {
-      return fail("Only the owner can perform this action", 403);
+    let canManageCustomers = ownerProfile?.role === "owner";
+    if (!canManageCustomers && (action === "createCustomer" || action === "listOrderCustomers")) {
+      const { data: staffAccess, error: staffAccessError } = await admin
+        .from("user_module_permissions").select("can_manage_customers")
+        .eq("user_id", authData.user.id).maybeSingle();
+      if (staffAccessError) return fail("Could not verify customer-management permission", 500);
+      canManageCustomers = staffAccess?.can_manage_customers === true;
+    }
+    if (ownerProfile?.role !== "owner" && !((action === "createCustomer" || action === "listOrderCustomers") && canManageCustomers)) {
+      return fail("Only the owner or an authorised customer manager can perform this action", 403);
+    }
+
+    if (action === "createCustomer" || action === "listOrderCustomers") {
+      if (action === "listOrderCustomers") {
+        const { data, error } = await admin.from("user_profiles")
+          .select("user_id, username, account_type").eq("account_type", "customer").order("username");
+        if (error) return fail("Could not load customer accounts", 500);
+        return respond({ customers: data || [] });
+      }
+      const username = String(body.username || "").trim().toLowerCase();
+      const password = String(body.password || "");
+      if (!validUsername(username)) return fail("Username must be 3–24 characters: letters, numbers or underscores");
+      if (password.length < 10) return fail("Password must be at least 10 characters");
+      const email = `${username}@users.knoxmap.invalid`;
+      const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      if (createError || !created.user) return fail(createError?.message || "Could not create customer account");
+      const { error: profileError } = await admin.from("user_profiles").insert({
+        user_id: created.user.id, username, role: "user", account_type: "customer"
+      });
+      if (profileError) { await admin.auth.admin.deleteUser(created.user.id); return fail(profileError.message); }
+      const { error: moduleError } = await admin.from("user_module_permissions").insert({
+        user_id: created.user.id, can_view_own_orders: body.enablePortal === true
+      });
+      if (moduleError) { await admin.auth.admin.deleteUser(created.user.id); return fail(moduleError.message); }
+      return respond({ success: true, userId: created.user.id });
     }
 
     // CREATE USER
@@ -189,6 +222,7 @@ Deno.serve(async (req) => {
           user_id: created.user.id,
           username,
           role: "user",
+          account_type: body.accountType === "customer" ? "customer" : "knox",
         });
 
       if (profileError) {
@@ -213,7 +247,7 @@ Deno.serve(async (req) => {
         await Promise.all([
           admin
             .from("user_profiles")
-            .select("user_id, username, role, created_at")
+            .select("user_id, username, role, account_type, created_at")
             .order("username"),
           admin
             .from("map_categories")
@@ -249,8 +283,8 @@ Deno.serve(async (req) => {
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
         moduleAccess: profile.role === "owner"
-          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true }
-          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false }),
+          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true, can_view_orders: true, can_create_orders: true, can_edit_orders: true, can_delete_orders: true, can_manage_customers: true, can_view_own_orders: true }
+          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false }),
         permissions: (categoriesResult.data || []).map((category) => {
           const permission = (permissionsResult.data || []).find(
             (item) =>
@@ -370,6 +404,12 @@ Deno.serve(async (req) => {
         can_edit_recipes: canViewCrafting && requested.can_edit_recipes === true,
         can_delete_recipes: canViewCrafting && requested.can_delete_recipes === true,
         can_view_hidden_recipes: canViewCrafting && requested.can_view_hidden_recipes === true,
+        can_view_orders: requested.can_view_orders === true,
+        can_create_orders: requested.can_view_orders === true && requested.can_create_orders === true,
+        can_edit_orders: requested.can_view_orders === true && requested.can_edit_orders === true,
+        can_delete_orders: requested.can_view_orders === true && requested.can_delete_orders === true,
+        can_manage_customers: requested.can_manage_customers === true,
+        can_view_own_orders: requested.can_view_own_orders === true,
       };
       const { error: moduleSaveError } = await admin
         .from("user_module_permissions")
@@ -377,7 +417,10 @@ Deno.serve(async (req) => {
       if (moduleSaveError) {
         return fail("Could not save section permissions", 500);
       }
-
+      const accountType = body.accountType === "customer" ? "customer" : "knox";
+      const { error: accountTypeError } = await admin.from("user_profiles")
+        .update({ account_type: accountType }).eq("user_id", userId);
+      if (accountTypeError) return fail("Permissions saved, but account marker could not be updated", 500);
       return respond({ success: true });
     }
 
