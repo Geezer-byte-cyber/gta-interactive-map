@@ -206,6 +206,7 @@ function App() {
           setProfile(null);
           setPermissions([]);
           setModuleAccess(null);
+          setPreviewUser(null);
           setActiveSection('map');
           setAdminOpen(false);
         }
