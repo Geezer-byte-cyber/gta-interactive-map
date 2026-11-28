@@ -978,3 +978,48 @@ button {
 
 
 .category-filter-row{display:flex;align-items:center;gap:5px}.category-filter-row>input[type=checkbox]{accent-color:#ff8a24;flex:none;width:13px;height:13px;margin:0 2px 0 4px}.category-filter-row .cat{flex:1;min-width:0}.range-toggle{display:flex!important;align-items:center;gap:8px!important;color:#e1c5af!important;font-size:10px!important}.range-toggle input{accent-color:#ff8a24}.range-editor{border:1px solid #59351e;border-radius:5px;padding:11px;background:#100c09}.range-editor strong{color:#ffad66;font-size:10px;letter-spacing:1px}.range-editor p{margin:6px 0 10px;font-size:10px}.range-editor-actions{display:flex;flex-wrap:wrap;gap:7px}.range-banner{gap:7px;max-width:calc(100% - 20px);white-space:normal}.range-banner button{text-decoration:none;border:1px solid #9c511d;border-radius:3px;padding:4px 7px;font-weight:700}.range-banner button:disabled{opacity:.4;cursor:not-allowed}
+
+
+/* Separate crafting workspace */
+.section-active{border-color:#ff8a24!important;color:#ffad66!important;background:#24160d!important}
+.crafting-page{min-height:calc(100vh - 82px);padding:30px clamp(16px,4vw,58px);background:#100c09;color:#f5eee8}
+.crafting-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;max-width:1250px;margin:0 auto 22px}
+.crafting-heading h2{font:700 34px 'Barlow Condensed',sans-serif;color:#ff8a24;margin:5px 0}
+.crafting-heading p{color:#b9a99a;font-size:12px;margin:0}
+.crafting-toolbar{max-width:1250px;margin:0 auto 20px;display:flex;gap:12px;align-items:center}
+.crafting-toolbar .search{flex:1;max-width:600px}
+.crafting-notice,.crafting-empty{max-width:1250px;margin:12px auto;padding:13px;border:1px solid #75451e;border-radius:5px;background:#21150e;color:#f0c19a;font-size:12px}
+.crafting-notice{display:flex;justify-content:space-between;gap:12px}
+.crafting-notice button{background:none;border:0;color:inherit}
+.recipe-grid{max-width:1250px;margin:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px}
+.recipe-card{background:#17110d;border:1px solid #59391f;border-radius:7px;padding:17px;box-shadow:0 8px 24px #0004}
+.recipe-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.recipe-card h3{font:700 23px 'Barlow Condensed',sans-serif;color:#ffad66;margin:3px 0 0}
+.recipe-actions{display:flex;gap:6px;align-items:center}
+.recipe-actions .outline-btn{padding:6px 9px}
+.danger-icon{display:inline-grid;place-items:center;background:#351412;border:1px solid #8d3d2e;color:#ffb6a7;border-radius:4px;padding:7px;cursor:pointer}
+.danger-icon:disabled{opacity:.35;cursor:not-allowed}
+.recipe-description{color:#b9a99a;font-size:11px;line-height:1.5}
+.recipe-output{display:flex;align-items:center;gap:10px;padding:12px;margin:15px 0;background:#26170e;border:1px solid #70421f;border-radius:5px}
+.recipe-output span,.ingredient-title{font-size:9px;letter-spacing:1px;color:#ffad66;font-weight:800}
+.recipe-output strong{flex:1;color:#fff;font-size:13px}
+.recipe-output b{color:#ffad66;font-size:12px}
+.calculator-head{display:flex;align-items:center;gap:7px;color:#ffad66;font-size:10px;font-weight:800;letter-spacing:1px;margin:15px 0 9px}
+.desired-output{display:flex!important;align-items:center;gap:7px!important;color:#d5c2b4!important;font-size:11px!important;flex-wrap:wrap}
+.desired-output input{width:82px!important;padding:7px!important}
+.ingredient-list{margin-top:12px;border-top:1px solid #49301e;padding-top:10px}
+.ingredient-title{margin-bottom:7px}
+.ingredient-row{display:flex;justify-content:space-between;gap:12px;padding:7px 2px;border-bottom:1px solid #302117;font-size:11px;color:#d8c9be}
+.ingredient-row strong{color:#ffad66;font-variant-numeric:tabular-nums}
+.recipe-modal{max-width:570px}
+.recipe-modal form{gap:12px}
+.recipe-form-row{display:grid;grid-template-columns:1fr 140px;gap:10px}
+.ingredient-form-head{display:flex;justify-content:space-between;align-items:center;margin-top:5px;color:#ffad66;font-size:10px;letter-spacing:1px}
+.small-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;background:#292019;color:#f5eee8;border:1px solid #59391f;border-radius:4px;font-size:10px;cursor:pointer}
+.ingredient-form-row{display:grid;grid-template-columns:minmax(0,1fr) 105px 34px;gap:7px;align-items:center}
+.ingredient-form-row input{min-width:0;width:100%;background:#0c0907;border:1px solid #59351e;border-radius:4px;padding:9px;color:#f3eae3;font-size:12px}
+.no-sections{min-height:65vh;display:grid;align-content:center;justify-items:center;text-align:center;color:#c4b3a6}
+.no-sections .brand-mark{margin-bottom:10px}
+.no-sections h2{color:#ff8a24;font-family:'Barlow Condensed',sans-serif}
+.no-sections p{font-size:12px}
+@media(max-width:600px){.crafting-page{padding:20px 12px}.crafting-heading h2{font-size:28px}.crafting-toolbar{align-items:stretch;flex-direction:column}.crafting-toolbar .search{max-width:none}.recipe-form-row{grid-template-columns:1fr 105px}.ingredient-form-row{grid-template-columns:minmax(0,1fr) 80px 32px}}
