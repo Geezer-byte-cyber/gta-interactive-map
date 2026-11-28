@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     }
 
     let canManageCustomers = ownerProfile?.role === "owner";
-    if (!canManageCustomers && ["createCustomer", "listOrderCustomers", "updateCustomerPassword"].includes(action)) {
+    if (!canManageCustomers && ["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action)) {
       const { data: staffAccess, error: staffAccessError } = await admin
         .from("user_module_permissions").select("can_manage_customers, can_view_orders")
         .eq("user_id", authData.user.id).maybeSingle();
@@ -165,7 +165,30 @@ Deno.serve(async (req) => {
       return fail("Only the owner or an authorised customer manager can perform this action", 403);
     }
 
-    if (action === "createCustomer" || action === "listOrderCustomers" || action === "updateCustomerPassword") {
+    if (action === "createCustomer" || action === "listOrderCustomers" || action === "updateCustomerPassword" || action === "updateCustomerCatalogueAccess") {
+      if (action === "updateCustomerCatalogueAccess") {
+        const userId = String(body.userId || "");
+        const canViewCatalogue = body.canViewCatalogue === true;
+        const requested = Array.isArray(body.categoryIds) ? body.categoryIds.map(String) : [];
+        const { data: target, error: targetError } = await admin.from("user_profiles")
+          .select("account_type, role").eq("user_id", userId).maybeSingle();
+        if (targetError || !target || target.role === "owner" || target.account_type !== "customer") return fail("Customer account not found", 404);
+        const { data: categories, error: categoriesError } = await admin.from("catalogue_categories").select("id");
+        if (categoriesError) return fail("Could not load catalogue categories", 500);
+        const validIds = new Set((categories || []).map(item => item.id));
+        if (requested.some(id => !validIds.has(id))) return fail("One of the selected catalogue categories is invalid");
+        const { error: moduleError } = await admin.from("user_module_permissions")
+          .upsert({ user_id: userId, can_view_catalogue: canViewCatalogue }, { onConflict: "user_id" });
+        if (moduleError) return fail("Could not update Catalogue access", 500);
+        const { error: clearError } = await admin.from("catalogue_category_permissions").delete().eq("user_id", userId);
+        if (clearError) return fail("Could not update category access", 500);
+        if (canViewCatalogue && requested.length) {
+          const { error: insertError } = await admin.from("catalogue_category_permissions")
+            .insert(requested.map(category_id => ({ user_id: userId, category_id, can_add: false, can_edit: false, can_delete: false })));
+          if (insertError) return fail("Could not save category access", 500);
+        }
+        return respond({ success: true });
+      }
       if (action === "updateCustomerPassword") {
         const userId = String(body.userId || "");
         const password = String(body.password || "");
@@ -179,13 +202,18 @@ Deno.serve(async (req) => {
         return respond({ success: true });
       }
       if (action === "listOrderCustomers") {
-        const [{ data: profiles, error: profileListError }, { data: portalUsers, error: portalListError }] = await Promise.all([
-          admin.from("user_profiles").select("user_id, username, account_type").order("username"),
-          admin.from("user_module_permissions").select("user_id").eq("can_view_own_orders", true),
+        const [{ data: profiles, error: profileListError }, { data: modules, error: moduleListError }, { data: categories, error: categoryListError }, { data: categoryRows, error: categoryRowsError }] = await Promise.all([
+          admin.from("user_profiles").select("user_id, username, account_type").eq("account_type", "customer").order("username"),
+          admin.from("user_module_permissions").select("user_id, can_view_own_orders, can_view_catalogue"),
+          admin.from("catalogue_categories").select("id, name").order("name"),
+          admin.from("catalogue_category_permissions").select("user_id, category_id"),
         ]);
-        if (profileListError || portalListError) return fail("Could not load customer accounts", 500);
-        const portalIds = new Set((portalUsers || []).map(item => item.user_id));
-        return respond({ customers: (profiles || []).filter(item => portalIds.has(item.user_id)) });
+        if (profileListError || moduleListError || categoryListError || categoryRowsError) return fail("Could not load customer accounts", 500);
+        return respond({ customers: (profiles || []).map(item => {
+          const module = (modules || []).find(row => row.user_id === item.user_id);
+          const allowedIds = new Set((categoryRows || []).filter(row => row.user_id === item.user_id).map(row => row.category_id));
+          return { ...item, canViewCatalogue: module?.can_view_catalogue === true, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
+        }) });
       }
       const username = String(body.username || "").trim().toLowerCase();
       const password = String(body.password || "");
