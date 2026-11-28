@@ -975,3 +975,6 @@ button {
     font-size: 9px;
   }
 }
+
+
+.category-filter-row{display:flex;align-items:center;gap:5px}.category-filter-row>input[type=checkbox]{accent-color:#ff8a24;flex:none;width:13px;height:13px;margin:0 2px 0 4px}.category-filter-row .cat{flex:1;min-width:0}.range-toggle{display:flex!important;align-items:center;gap:8px!important;color:#e1c5af!important;font-size:10px!important}.range-toggle input{accent-color:#ff8a24}.range-editor{border:1px solid #59351e;border-radius:5px;padding:11px;background:#100c09}.range-editor strong{color:#ffad66;font-size:10px;letter-spacing:1px}.range-editor p{margin:6px 0 10px;font-size:10px}.range-editor-actions{display:flex;flex-wrap:wrap;gap:7px}.range-banner{gap:7px;max-width:calc(100% - 20px);white-space:normal}.range-banner button{text-decoration:none;border:1px solid #9c511d;border-radius:3px;padding:4px 7px;font-weight:700}.range-banner button:disabled{opacity:.4;cursor:not-allowed}
