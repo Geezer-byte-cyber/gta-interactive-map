@@ -18,6 +18,9 @@ export default function CataloguePanel({ isOwner, onClose }) {
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState([]);
   const [itemUsers, setItemUsers] = useState([]);
+  const [categoryEditor, setCategoryEditor] = useState(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryBusy, setCategoryBusy] = useState(false);
 
   const permission = id => permissions.find(p => p.category_id === id);
   const canAdd = id => isOwner || permission(id)?.can_add === true;
@@ -80,17 +83,21 @@ export default function CataloguePanel({ isOwner, onClose }) {
     const { error } = await supabase.from('catalogue_items').delete().eq('id', item.id);
     if (error) setNotice(error.message); else { setNotice('Catalogue item deleted.'); await load(); }
   };
-  const addCategory = async () => {
-    const name = window.prompt('New catalogue category name');
-    if (!name?.trim()) return;
-    const { error } = await supabase.from('catalogue_categories').insert({ name:name.trim() });
-    if (error) setNotice(error.message); else { setNotice('Category created.'); await load(); }
-  };
-  const renameCategory = async category => {
-    const name = window.prompt('Category name', category.name);
-    if (!name?.trim()) return;
-    const { error } = await supabase.from('catalogue_categories').update({ name:name.trim() }).eq('id', category.id);
-    if (error) setNotice(error.message); else await load();
+  const addCategory = () => { setCategoryName(''); setCategoryEditor('new'); };
+  const renameCategory = category => { setCategoryName(category.name); setCategoryEditor(category); };
+  const saveCategory = async event => {
+    event.preventDefault();
+    const name = categoryName.trim();
+    if (!name) { setNotice('Enter a category name.'); return; }
+    setCategoryBusy(true); setNotice('');
+    const result = categoryEditor === 'new'
+      ? await supabase.from('catalogue_categories').insert({ name })
+      : await supabase.from('catalogue_categories').update({ name }).eq('id', categoryEditor.id);
+    setCategoryBusy(false);
+    if (result.error) { setNotice(result.error.message); return; }
+    setCategoryEditor(null);
+    setNotice(categoryEditor === 'new' ? 'Category created.' : 'Category renamed.');
+    await load();
   };
   const deleteCategory = async category => {
     if (!window.confirm(`Delete "${category.name}" and all its catalogue items?`)) return;
@@ -122,6 +129,16 @@ export default function CataloguePanel({ isOwner, onClose }) {
       </article>)}
     </div> : <div className="crafting-empty">{items.length ? 'No catalogue items match your search or category.' : 'No catalogue items have been added yet.'}</div>}
     {categories.filter(c=>canAdd(c.id) && (selectedCategory==='all' || selectedCategory===c.id)).map(c=><button key={c.id} className="primary catalogue-add" onClick={()=>openNew(c.id)}><Plus size={15}/> Add item to {c.name}</button>)}
+    {categoryEditor!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setCategoryEditor(null);}}><div className="modal editor-modal catalogue-modal">
+      <button className="modal-close" onClick={()=>setCategoryEditor(null)}><X/></button>
+      <div className="eyebrow">{categoryEditor==='new'?'NEW CATALOGUE CATEGORY':'EDIT CATALOGUE CATEGORY'}</div>
+      <h2>{categoryEditor==='new'?'Add category':'Rename category'}</h2>
+      <p className="recipe-description">Create a category to organise catalogue items. Account access is managed separately in the Admin Panel.</p>
+      <form onSubmit={saveCategory}>
+        <label>Category name<input autoFocus required maxLength="60" value={categoryName} onChange={e=>setCategoryName(e.target.value)} placeholder="e.g. Vehicle Services"/></label>
+        <div className="modal-actions"><button type="button" className="outline-btn" onClick={()=>setCategoryEditor(null)}>Cancel</button><button className="primary" disabled={categoryBusy}><Save size={15}/>{categoryBusy?'Saving...':'Save category'}</button></div>
+      </form>
+    </div></div>}
     {editing!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setEditing(null);}}><div className="modal editor-modal recipe-modal catalogue-modal">
       <button className="modal-close" onClick={()=>setEditing(null)}><X/></button><div className="eyebrow">{editing==='new'?'NEW CATALOGUE ITEM':'EDIT CATALOGUE ITEM'}</div><h2>{editing==='new'?'Add item':'Edit item'}</h2>
       <form onSubmit={save}>
