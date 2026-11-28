@@ -55,7 +55,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
   const loadInventory = async storage => {
     const [{ data: itemData, error: itemError }, { data: movementData, error: movementError }] = await Promise.all([
       supabase.from('storage_items').select('*').eq('storage_id', storage.id).order('name'),
-      supabase.from('storage_item_movements').select('*').eq('storage_id', storage.id).order('created_at', { ascending: false }).limit(100)
+      supabase.from('storage_item_movements').select('*').eq('storage_id', storage.id).order('created_at', { ascending: false }).limit(25)
     ]);
     if (itemError || movementError) {
       setNotice(itemError?.message || movementError?.message);
@@ -258,10 +258,10 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
             </form>
           </section>
           <section className="storage-history-panel">
-            <div className="storage-panel-title"><h3><History size={17}/> Movement history</h3><span className="eyebrow">LATEST 100</span></div>
+            <div className="storage-panel-title"><h3><History size={17}/> Movement history</h3><span className="eyebrow">LATEST 25</span></div>
             {!movements.length ? <p className="storage-history-empty">No movements logged yet.</p> : movements.map(move => <div className="storage-movement" key={move.id}>
               <span className={move.action === 'add' ? 'storage-movement-add' : 'storage-movement-remove'}>{move.action === 'add' ? '+' : '−'}{move.quantity}</span>
-              <div><strong>{move.item_name}</strong><span>{move.action === 'add' ? 'Added' : 'Removed'} · {formatWeight(move.unit_weight)} each · {formatWeight(move.quantity * move.unit_weight)} total weight</span><small>{new Date(move.created_at).toLocaleString()}</small></div>
+              <div><strong>{move.item_name}</strong><span>{move.action === 'add' ? 'Added' : 'Removed'} · {formatWeight(move.unit_weight)} each · {formatWeight(move.quantity * move.unit_weight)} total weight</span><small>Logged by {move.logged_by_username || 'Unknown user'} · {new Date(move.created_at).toLocaleString()}</small></div>
             </div>)}
           </section>
         </div>
