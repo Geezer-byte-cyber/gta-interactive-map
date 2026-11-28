@@ -16,8 +16,6 @@ export default function CataloguePanel({ isOwner, onClose }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [accounts, setAccounts] = useState([]);
-  const [itemUsers, setItemUsers] = useState([]);
   const [categoryEditor, setCategoryEditor] = useState(null);
   const [categoryName, setCategoryName] = useState('');
   const [categoryBusy, setCategoryBusy] = useState(false);
@@ -36,10 +34,6 @@ export default function CataloguePanel({ isOwner, onClose }) {
     ]);
     if (ce || ie || pe) setNotice(ce?.message || ie?.message || pe?.message || 'Could not load catalogue');
     else { setCategories(cats || []); setItems(its || []); setPermissions(perms || []); }
-    if (isOwner) {
-      const { data, error } = await supabase.from('user_profiles').select('user_id,username,account_type').order('username');
-      if (!error) setAccounts(data || []);
-    }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -49,12 +43,10 @@ export default function CataloguePanel({ isOwner, onClose }) {
     `${item.name} ${item.description || ''} ${categories.find(c => c.id === item.category_id)?.name || ''}`.toLowerCase().includes(search.toLowerCase())
   ), [items, selectedCategory, search, categories]);
 
-  const openNew = categoryId => { setEditing('new'); setDraft({ ...blank, category_id: categoryId || categories.find(c => canAdd(c.id))?.id || '' }); setItemUsers([]); };
+  const openNew = categoryId => { setEditing('new'); setDraft({ ...blank, category_id: categoryId || categories.find(c => canAdd(c.id))?.id || '' }); };
   const openEdit = async item => {
     setEditing(item.id);
     setDraft({ name:item.name, description:item.description || '', price:String(item.price ?? 0), image_url:item.image_url || '', category_id:item.category_id });
-    const { data } = await supabase.from('catalogue_item_access').select('user_id').eq('item_id', item.id);
-    setItemUsers((data || []).map(x => x.user_id));
   };
   const save = async e => {
     e.preventDefault();
@@ -67,15 +59,6 @@ export default function CataloguePanel({ isOwner, onClose }) {
       ? await supabase.from('catalogue_items').insert({ ...payload, created_by:(await supabase.auth.getUser()).data.user?.id }).select().single()
       : await supabase.from('catalogue_items').update(payload).eq('id', editing).select().single();
     if (result.error) { setNotice(result.error.message); setBusy(false); return; }
-    if (isOwner) {
-      const id = result.data.id;
-      const { error: clearError } = await supabase.from('catalogue_item_access').delete().eq('item_id', id);
-      if (clearError) { setNotice('Item saved, but account visibility could not be updated: ' + clearError.message); setBusy(false); return; }
-      if (itemUsers.length) {
-        const { error } = await supabase.from('catalogue_item_access').insert(itemUsers.map(user_id => ({ item_id:id, user_id })));
-        if (error) setNotice('Item saved, but account visibility could not be updated: ' + error.message);
-      }
-    }
     setEditing(null); setBusy(false); await load();
   };
   const remove = async item => {
@@ -147,7 +130,6 @@ export default function CataloguePanel({ isOwner, onClose }) {
         <label>Price (£)<input required type="number" min="0" step="0.01" value={draft.price} onChange={e=>setDraft({...draft,price:e.target.value})}/></label>
         <label>Description<textarea rows="3" value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Optional item details..."/></label>
         <label>Image URL (optional)<input value={draft.image_url} onChange={e=>setDraft({...draft,image_url:e.target.value})} placeholder="https://..."/></label>
-        {isOwner && <fieldset className="catalogue-access-field"><legend>ACCOUNT-SPECIFIC VISIBILITY</legend><p>Choose accounts that can see this item. Leave all unticked to show it to everyone who can view this category.</p>{accounts.map(a=><label className="catalogue-account-option" key={a.user_id}><input type="checkbox" checked={itemUsers.includes(a.user_id)} onChange={e=>setItemUsers(old=>e.target.checked?[...old,a.user_id]:old.filter(x=>x!==a.user_id))}/>{a.username} <span className={a.account_type==='customer'?'customer-badge':'knox-badge'}>{a.account_type==='customer'?'CUSTOMER':'KNOX'}</span></label>)}</fieldset>}
         <div className="modal-actions"><button type="button" className="outline-btn" onClick={()=>setEditing(null)}>Cancel</button><button className="primary" disabled={busy}><Save size={15}/>{busy?'Saving...':'Save item'}</button></div>
       </form>
     </div></div>}
