@@ -627,7 +627,17 @@ export default function AdminPanel({ onClose }) {
                 ) : (
                   <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '16px 0', fontSize: 12 }}>
                     <strong style={{ color: '#ffad66' }}>Knox catalogue access</strong>
-                    <p style={{ marginBottom: 0 }}>Knox accounts with Catalogue panel access automatically see every catalogue category.</p>
+                    <p>Knox accounts with Catalogue panel access automatically see every category. Set their item-management permissions below.</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(110px,1fr) repeat(3,55px)', gap: 6, alignItems: 'center', color: '#ffad66', padding: '8px 0' }}>
+                      <strong>Category</strong><strong>Add</strong><strong>Edit</strong><strong>Delete</strong>
+                    </div>
+                    {cataloguePermissions.map(p => (
+                      <div key={p.categoryId} style={{ display: 'grid', gridTemplateColumns: 'minmax(110px,1fr) repeat(3,55px)', gap: 6, alignItems: 'center', borderTop: '1px solid #49301e', padding: '8px 0' }}>
+                        <span>{p.categoryName}</span>
+                        {['canAdd','canEdit','canDelete'].map(key => <input key={key} aria-label={key + ' ' + p.categoryName} type="checkbox" checked={p[key]} onChange={e => setCataloguePermissions(current => current.map(x => x.categoryId === p.categoryId ? { ...x, [key]: e.target.checked } : x))}/>)}
+                      </div>
+                    ))}
+                    {!cataloguePermissions.length && <p>No catalogue categories have been created yet.</p>}
                   </div>
                 )}
 
