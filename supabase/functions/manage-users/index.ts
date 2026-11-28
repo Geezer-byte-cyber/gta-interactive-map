@@ -167,10 +167,13 @@ Deno.serve(async (req) => {
 
     if (action === "createCustomer" || action === "listOrderCustomers") {
       if (action === "listOrderCustomers") {
-        const { data, error } = await admin.from("user_profiles")
-          .select("user_id, username, account_type").eq("account_type", "customer").order("username");
-        if (error) return fail("Could not load customer accounts", 500);
-        return respond({ customers: data || [] });
+        const [{ data: profiles, error: profileListError }, { data: portalUsers, error: portalListError }] = await Promise.all([
+          admin.from("user_profiles").select("user_id, username, account_type").order("username"),
+          admin.from("user_module_permissions").select("user_id").eq("can_view_own_orders", true),
+        ]);
+        if (profileListError || portalListError) return fail("Could not load customer accounts", 500);
+        const portalIds = new Set((portalUsers || []).map(item => item.user_id));
+        return respond({ customers: (profiles || []).filter(item => portalIds.has(item.user_id)) });
       }
       const username = String(body.username || "").trim().toLowerCase();
       const password = String(body.password || "");
