@@ -64,9 +64,11 @@ const secondaryStyle = {
 export default function AdminPanel({ onClose }) {
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [catalogueCategories, setCatalogueCategories] = useState([]);
+  const [cataloguePermissions, setCataloguePermissions] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [permissions, setPermissions] = useState([]);
-  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false });
+  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false });
   const [accountMarker, setAccountMarker] = useState('knox');
 
   const [newUsername, setNewUsername] = useState('');
@@ -107,6 +109,7 @@ export default function AdminPanel({ onClose }) {
 
       setUsers(data.users || []);
       setCategories(data.categories || []);
+      setCatalogueCategories(data.catalogueCategories || []);
 
       const currentId = selectedId;
       if (currentId && !(data.users || []).some(u => u.user_id === currentId)) {
@@ -126,11 +129,16 @@ export default function AdminPanel({ onClose }) {
   useEffect(() => {
     if (!selectedUser) {
       setPermissions([]);
+      setCataloguePermissions([]);
       return;
     }
 
     setAccountMarker(selectedUser.account_type || 'knox');
     setModuleAccess(selectedUser.moduleAccess || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false });
+    setCataloguePermissions(catalogueCategories.map(category => {
+      const existing = selectedUser.cataloguePermissions?.find(p => p.categoryId === category.id);
+      return { categoryId: category.id, categoryName: category.name, canView: existing?.canView === true, canAdd: existing?.canAdd === true, canEdit: existing?.canEdit === true, canDelete: existing?.canDelete === true };
+    }));
     setPermissions(
       categories.map(category => {
         const existing = selectedUser.permissions?.find(
@@ -147,7 +155,7 @@ export default function AdminPanel({ onClose }) {
         };
       })
     );
-  }, [selectedId, users, categories]);
+  }, [selectedId, users, categories, catalogueCategories]);
 
   const changePermission = (categoryId, key, value) => {
     setPermissions(current =>
@@ -218,6 +226,7 @@ export default function AdminPanel({ onClose }) {
         action: 'updatePermissions',
         userId: selectedUser.user_id,
         permissions,
+        cataloguePermissions,
         moduleAccess,
         accountType: accountMarker
       });
@@ -537,7 +546,8 @@ export default function AdminPanel({ onClose }) {
                     ['can_edit_orders', 'Edit orders / update status'],
                     ['can_delete_orders', 'Delete orders'],
                     ['can_manage_customers', 'Create customer accounts'],
-                    ['can_view_own_orders', 'Customer portal: view assigned orders']
+                    ['can_view_own_orders', 'Customer portal: view assigned orders'],
+                    ['can_view_catalogue', 'View Catalogue']
                   ].map(([key, label]) => (
                     <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
                       <input type="checkbox" checked={moduleAccess[key] === true}
@@ -554,13 +564,7 @@ export default function AdminPanel({ onClose }) {
                     </label>
                   ))}
                 </div>
-                <p style={{
-                  fontSize: 12,
-                  color: '#b9a99a'
-                }}>
-                  Enable View to give access to a category. Add, Edit and
-                  Delete can then be controlled independently.
-                </p>
+                <p style={{ fontSize: 12, color: '#b9a99a' }}>Map category permissions are managed separately below.</p>
 
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{
@@ -607,6 +611,25 @@ export default function AdminPanel({ onClose }) {
                     </tbody>
                   </table>
                 </div>
+
+                {selectedUser.account_type === 'customer' ? (
+                  <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '16px 0' }}>
+                    <h4 style={{ margin: '0 0 8px', color: '#ffad66' }}>Catalogue category access</h4>
+                    <p style={{ fontSize: 12, color: '#b9a99a' }}>Choose which catalogue categories this customer can see. These settings do not affect Knox accounts.</p>
+                    {cataloguePermissions.map(p => (
+                      <label key={p.categoryId} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 0', fontSize: 12, borderTop: '1px solid #49301e' }}>
+                        <input type="checkbox" checked={p.canView} onChange={e => setCataloguePermissions(current => current.map(x => x.categoryId === p.categoryId ? { ...x, canView: e.target.checked } : x))}/>
+                        {p.categoryName}
+                      </label>
+                    ))}
+                    {!cataloguePermissions.length && <p style={{ fontSize: 12 }}>No catalogue categories have been created yet.</p>}
+                  </div>
+                ) : (
+                  <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '16px 0', fontSize: 12 }}>
+                    <strong style={{ color: '#ffad66' }}>Knox catalogue access</strong>
+                    <p style={{ marginBottom: 0 }}>Knox accounts with Catalogue panel access automatically see every catalogue category.</p>
+                  </div>
+                )}
 
                 <button
                   style={{ ...buttonStyle, marginTop: 15 }}
