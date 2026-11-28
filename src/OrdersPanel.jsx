@@ -23,6 +23,10 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
   const [noteDraft, setNoteDraft] = useState('');
   const [customerForm, setCustomerForm] = useState({ username: '', password: '', enablePortal: false });
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [catalogueCategories, setCatalogueCategories] = useState([]);
+  const [editingCustomerAccess, setEditingCustomerAccess] = useState(null);
+  const [customerCatalogueEnabled, setCustomerCatalogueEnabled] = useState(false);
+  const [customerCategoryIds, setCustomerCategoryIds] = useState([]);
 
   const invoke = async body => {
     const { data, error } = await supabase.functions.invoke('manage-users', { body });
@@ -38,7 +42,7 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
     if (!isCustomer) {
       try {
         const result = await invoke({ action: 'listOrderCustomers' });
-        setCustomers(result.customers || []);
+        setCustomers(result.customers || []); setCatalogueCategories(result.catalogueCategories || []);
       } catch (e) { setNotice(e.message); }
     }
     setLoading(false);
@@ -124,6 +128,24 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
     setSaving(false);
   };
 
+  const openCustomerCatalogue = customer => {
+    setEditingCustomerAccess(customer);
+    setCustomerCatalogueEnabled(customer.canViewCatalogue === true);
+    setCustomerCategoryIds((customer.catalogueCategories || []).filter(c => c.canView).map(c => c.id));
+  };
+
+  const saveCustomerCatalogue = async () => {
+    if (!editingCustomerAccess) return;
+    setSaving(true);
+    try {
+      await invoke({ action: 'updateCustomerCatalogueAccess', userId: editingCustomerAccess.user_id, canViewCatalogue: customerCatalogueEnabled, categoryIds: customerCatalogueEnabled ? customerCategoryIds : [] });
+      setNotice(`Catalogue access updated for ${editingCustomerAccess.username}.`);
+      setEditingCustomerAccess(null);
+      await load();
+    } catch (error) { setNotice(error.message); }
+    setSaving(false);
+  };
+
   return <section className="orders-page">
     <div className="orders-heading">
       <div><div className="eyebrow">THE KNOX MAP · TICKET DESK</div><h2>{isCustomer ? 'My Orders' : 'Orders & Tickets'}</h2><p>{isCustomer ? 'View the progress of your orders.' : 'Create orders, track progress and keep customer requests organised.'}</p></div>
@@ -132,7 +154,8 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
     <div className="orders-toolbar"><label className="search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..."/></label><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select><button className="small-btn" onClick={load}><RefreshCw size={13}/> Refresh</button></div>
     {notice && <div className="crafting-notice">{notice}<button onClick={() => setNotice('')}><X size={14}/></button></div>}
     {showCustomerForm && canManageCustomers && <form className="order-customer-form" onSubmit={createCustomer}><h3>Create customer login</h3><p>Customers can only view orders assigned to their account.</p><input required minLength="3" maxLength="24" value={customerForm.username} onChange={e => setCustomerForm(v => ({...v, username:e.target.value}))} placeholder="Customer username"/><input required minLength="10" type="password" value={customerForm.password} onChange={e => setCustomerForm(v => ({...v,password:e.target.value}))} placeholder="Temporary password (10+ characters)"/><label className="customer-portal-toggle"><input type="checkbox" checked={customerForm.enablePortal} onChange={e => setCustomerForm(v => ({...v,enablePortal:e.target.checked}))}/> Allow this account to view its assigned orders (optional)</label><button className="primary" disabled={saving}>Create customer</button></form>}
-    {!isCustomer && canManageCustomers && customers.length > 0 && <div className="order-customer-list"><h3>Customer accounts</h3>{customers.map(customer => <div className="order-customer-account" key={customer.user_id}><strong>{customer.username} <span className={customer.account_type === 'customer' ? 'account-type-badge customer-badge' : 'account-type-badge knox-badge'}>{customer.account_type === 'customer' ? 'CUSTOMER' : 'KNOX'}</span></strong><button className="small-btn" disabled={saving} onClick={() => resetCustomerPassword(customer)}>Reset password</button></div>)}</div>}
+    {!isCustomer && canManageCustomers && customers.length > 0 && <div className="order-customer-list"><h3>Customer accounts</h3>{customers.map(customer => <div className="order-customer-account" key={customer.user_id}><strong>{customer.username} <span className="account-type-badge customer-badge">CUSTOMER</span></strong><div style={{display:'flex',gap:7,flexWrap:'wrap'}}><button className="small-btn" disabled={saving} onClick={() => openCustomerCatalogue(customer)}>Catalogue access</button>{customer.canViewOwnOrders && <button className="small-btn" disabled={saving} onClick={() => resetCustomerPassword(customer)}>Reset password</button>}</div></div>)}</div>}
+    {editingCustomerAccess && canManageCustomers && <div className="order-customer-form"><h3>Catalogue access · {editingCustomerAccess.username}</h3><p>Choose whether this customer can open the Catalogue and which categories they can see.</p><label className="customer-portal-toggle"><input type="checkbox" checked={customerCatalogueEnabled} onChange={e => setCustomerCatalogueEnabled(e.target.checked)}/> Allow access to Catalogue panel</label>{customerCatalogueEnabled && <div style={{margin:'12px 0',display:'grid',gap:8}}>{catalogueCategories.map(category=><label key={category.id} className="customer-portal-toggle"><input type="checkbox" checked={customerCategoryIds.includes(category.id)} onChange={e => setCustomerCategoryIds(current => e.target.checked ? [...current,category.id] : current.filter(id => id!==category.id))}/>{category.name}</label>)}</div>}<div style={{display:'flex',gap:8}}><button className="primary" disabled={saving} onClick={saveCustomerCatalogue}>Save catalogue access</button><button className="small-btn" disabled={saving} onClick={() => setEditingCustomerAccess(null)}>Cancel</button></div></div>}
     {loading ? <div className="crafting-empty">Loading orders…</div> : <div className="orders-layout">
       <div className="orders-list">{filtered.map(order => <button key={order.id} className={selected?.id === order.id ? 'order-row selected' : 'order-row'} onClick={() => {setSelected(order); if (!isCustomer) loadNotes(order);}}><span className="order-ticket">{(order.order_number ? `KX-${String(order.order_number).padStart(6, '0')}` : 'TICKET')}</span><strong>{order.title}</strong><small>{!isCustomer && <>{customerFor(order.customer_user_id)?.username || 'Customer'} <span className={customerFor(order.customer_user_id)?.account_type === 'customer' ? 'account-type-badge customer-badge' : 'account-type-badge knox-badge'}>{customerFor(order.customer_user_id)?.account_type === 'customer' ? 'CUSTOMER' : 'KNOX'}</span> · </>}Opened by {order.opened_by || 'Unknown'} · {new Date(order.created_at).toLocaleDateString()}</small><span className={`order-status status-${order.status.toLowerCase().replaceAll(' ', '-')}`}>{order.status}</span><span className="order-ticket-money">{money(order.amount_due)}</span><span className={`payment-status payment-${order.payment_status || 'awaiting_payment'}`}>{order.payment_status === 'paid' ? 'PAID' : 'AWAITING PAYMENT'}</span></button>)}{!filtered.length && <div className="crafting-empty">No orders found.</div>}</div>
       <div className="order-detail">{selected && orders.some(o => o.id === selected.id) ? <><div className="order-detail-head"><div><div className="eyebrow">{(selected.order_number ? `KX-${String(selected.order_number).padStart(6, '0')}` : 'ORDER TICKET')}</div><h3>{selected.title}</h3><span className={`order-status status-${selected.status.toLowerCase().replaceAll(' ', '-')}`}>{selected.status}</span><div className="order-financial-summary"><strong>{money(selected.amount_due)}</strong><span className={`payment-status payment-${selected.payment_status || 'awaiting_payment'}`}>{selected.payment_status === 'paid' ? 'PAID' : 'AWAITING PAYMENT'}</span></div><p className="order-opened-by">Opened by <strong>{selected.opened_by || 'Unknown'}</strong></p></div><div className="order-head-actions">{canEdit && <button className="small-btn" onClick={() => openEdit(selected)}>Edit order</button>}{canDelete && <button className="danger-icon" onClick={() => deleteOrder(selected)} title="Delete order"><Trash2 size={15}/></button>}</div></div>
