@@ -247,9 +247,9 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
               return <div className="storage-item-row" key={item.id}>
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
                 <div className="storage-item-controls">
-                  <input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { quantity: e.target.value } }))}/>
-                  {!readOnly && <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'add', row.quantity)}><Plus size={13}/> Add</button>
-                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'remove', row.quantity)}><Minus size={13}/> Remove</button>
+                  {!readOnly && <><input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { quantity: e.target.value } }))}/>
+                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'add', row.quantity)}><Plus size={13}/> Add</button>
+                  <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, 'remove', row.quantity)}><Minus size={13}/> Remove</button></>}
                 </div>
               </div>;
             })}
