@@ -170,7 +170,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
             <label>Storage name<input required maxLength={100} value={draft.name} onChange={e => setField('name', e.target.value)}/></label>
             <label>Type<select value={draft.type} onChange={e => setField('type', e.target.value)}><option value="container">Container</option><option value="safe">Safe</option></select></label>
             <label>Capacity<input required type="number" min="1" step="1" value={draft.capacity} onChange={e => setField('capacity', e.target.value)} placeholder="e.g. 100"/></label>
-            <label>Access pincode<input required type="password" maxLength={64} value={draft.pincode} onChange={e => setField('pincode', e.target.value)} placeholder="Enter pincode"/></label>
+            <label>Access pincode<input required type="text" maxLength={64} value={draft.pincode} onChange={e => setField('pincode', e.target.value)} placeholder="Enter pincode"/></label>
             <label>Description (optional)<textarea rows="3" value={draft.description} onChange={e => setField('description', e.target.value)} placeholder="Additional details..."/></label>
             {isOwner && <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '12px 0' }}>
               <h4 style={{ margin: '0 0 8px', color: '#ffad66' }}>Visible to Knox accounts</h4>
