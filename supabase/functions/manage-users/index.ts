@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
           admin.from("catalogue_category_permissions").select("user_id, category_id"),
         ]);
         if (profileListError || moduleListError || categoryListError || categoryRowsError) return fail("Could not load customer accounts", 500);
-        return respond({ customers: (profiles || []).map(item => {
+        return respond({ catalogueCategories: categories || [], customers: (profiles || []).map(item => {
           const module = (modules || []).find(row => row.user_id === item.user_id);
           const allowedIds = new Set((categoryRows || []).filter(row => row.user_id === item.user_id).map(row => row.category_id));
           return { ...item, canViewCatalogue: module?.can_view_catalogue === true, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
