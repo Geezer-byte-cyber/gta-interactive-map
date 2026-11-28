@@ -482,7 +482,7 @@ function App() {
 
     setUsername('');
     setPassword('');
-    setNotice('Welcome to The Knox Map.');
+    setNotice('Welcome to Knox HQ.');
   };
 
   const logout = async () => {
@@ -753,7 +753,7 @@ function App() {
         <div className="auth-modal modal" style={{ margin: '12vh auto', maxWidth: 440 }}>
           <div className="brand-mark">K</div>
           <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
-          <h1>THE KNOX MAP</h1>
+          <h1>KNOX HQ</h1>
           <p>Supabase is not configured. Please check the website environment settings.</p>
         </div>
       </div>
@@ -766,7 +766,7 @@ function App() {
         <div className="auth-modal modal" style={{ margin: '12vh auto', maxWidth: 440, textAlign: 'center' }}>
           <div className="brand-mark" style={{ margin: '0 auto 15px' }}>K</div>
           <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
-          <h1>THE KNOX MAP</h1>
+          <h1>KNOX HQ</h1>
           <p>Preparing your map access...</p>
         </div>
       </div>
@@ -786,7 +786,7 @@ function App() {
             <div className="brand-mark">K</div>
             <div>
               <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
-              <h1>THE KNOX MAP</h1>
+              <h1>KNOX HQ</h1>
             </div>
           </div>
 
@@ -848,7 +848,7 @@ function App() {
           <div className="brand-mark">K</div>
           <div>
             <div className="eyebrow">GRAND THEFT AUTO V • INTERACTIVE ATLAS</div>
-            <h1>THE KNOX MAP</h1>
+            <h1>KNOX HQ</h1>
           </div>
         </div>
 
@@ -1217,7 +1217,7 @@ function App() {
         </section>
       </main>
       ) : (
-        <div className="no-sections"><div className="brand-mark">K</div><h2>THE KNOX MAP</h2><p>Your account does not currently have access to a section.</p></div>
+        <div className="no-sections"><div className="brand-mark">K</div><h2>KNOX HQ</h2><p>Your account does not currently have access to a section.</p></div>
       )}
 
       {notice && (
