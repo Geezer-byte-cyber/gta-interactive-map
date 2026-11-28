@@ -5,7 +5,7 @@ import { Plus, X, Save, Trash2, Pencil, ArrowLeft, Search, Package, Tag } from '
 const blank = { name: '', description: '', price: '0.00', image_url: '', category_id: '' };
 const money = value => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(value || 0));
 
-export default function CataloguePanel({ isOwner, onClose }) {
+export default function CataloguePanel({ isOwner, onClose, previewReadOnly = false, previewCategories = null }) {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -21,9 +21,11 @@ export default function CataloguePanel({ isOwner, onClose }) {
   const [categoryBusy, setCategoryBusy] = useState(false);
 
   const permission = id => permissions.find(p => p.category_id === id);
-  const canAdd = id => isOwner || permission(id)?.can_add === true;
-  const canEdit = id => isOwner || permission(id)?.can_edit === true;
-  const canDelete = id => isOwner || permission(id)?.can_delete === true;
+  const canAdd = id => !previewReadOnly && (isOwner || permission(id)?.can_add === true);
+  const canEdit = id => !previewReadOnly && (isOwner || permission(id)?.can_edit === true);
+  const canDelete = id => !previewReadOnly && (isOwner || permission(id)?.can_delete === true);
+
+  const visibleCategories = previewReadOnly && Array.isArray(previewCategories) ? categories.filter(c => previewCategories.some(p => p.categoryId === c.id && p.canView)) : categories;
 
   const load = async () => {
     setLoading(true);
@@ -39,9 +41,10 @@ export default function CataloguePanel({ isOwner, onClose }) {
   useEffect(() => { load(); }, []);
 
   const visibleItems = useMemo(() => items.filter(item =>
+    (!previewReadOnly || visibleCategories.some(c => c.id === item.category_id)) &&
     (selectedCategory === 'all' || item.category_id === selectedCategory) &&
     `${item.name} ${item.description || ''} ${categories.find(c => c.id === item.category_id)?.name || ''}`.toLowerCase().includes(search.toLowerCase())
-  ), [items, selectedCategory, search, categories]);
+  ), [items, selectedCategory, search, categories, previewReadOnly, previewCategories]);
 
   const openNew = categoryId => { setEditing('new'); setDraft({ ...blank, category_id: categoryId || categories.find(c => canAdd(c.id))?.id || '' }); };
   const openEdit = async item => {
@@ -99,20 +102,20 @@ export default function CataloguePanel({ isOwner, onClose }) {
     </div>
     <div className="catalogue-category-tabs">
       <button className={selectedCategory==='all'?'catalogue-chip active':'catalogue-chip'} onClick={()=>setSelectedCategory('all')}>All items</button>
-      {categories.map(c=><button key={c.id} className={selectedCategory===c.id?'catalogue-chip active':'catalogue-chip'} onClick={()=>setSelectedCategory(c.id)}>{c.name}</button>)}
+      {visibleCategories.map(c=><button key={c.id} className={selectedCategory===c.id?'catalogue-chip active':'catalogue-chip'} onClick={()=>setSelectedCategory(c.id)}>{c.name}</button>)}
     </div>
-    {isOwner && categories.length>0 && <details className="catalogue-category-manager"><summary><Tag size={14}/> Manage categories <span>{categories.length} categories</span></summary><div>{categories.map(c=><div key={c.id}><strong>{c.name}</strong><span><button className="outline-btn" onClick={()=>renameCategory(c)}><Pencil size={12}/> Rename</button><button className="danger-icon" onClick={()=>deleteCategory(c)} title="Delete category"><Trash2 size={13}/></button></span></div>)}</div></details>}
+    {isOwner && !previewReadOnly && visibleCategories.length>0 && <details className="catalogue-category-manager"><summary><Tag size={14}/> Manage categories <span>{categories.length} categories</span></summary><div>{visibleCategories.map(c=><div key={c.id}><strong>{c.name}</strong><span><button className="outline-btn" onClick={()=>renameCategory(c)}><Pencil size={12}/> Rename</button><button className="danger-icon" onClick={()=>deleteCategory(c)} title="Delete category"><Trash2 size={13}/></button></span></div>)}</div></details>}
     {notice && <div className="crafting-notice">{notice}<button onClick={()=>setNotice('')}><X size={14}/></button></div>}
     {loading ? <div className="crafting-empty">Loading catalogue...</div> : visibleItems.length ? <div className="recipe-grid catalogue-grid">
       {visibleItems.map(item=><article className="recipe-card catalogue-card" key={item.id}>
         <div className="catalogue-item-image">{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div><Package size={30}/><span>KNOX HQ</span></div>}</div>
-        <div className="recipe-card-head"><div><div className="eyebrow">{categories.find(c=>c.id===item.category_id)?.name || 'CATALOGUE ITEM'}</div><h3>{item.name}</h3></div><div className="recipe-actions">{canEdit(item.category_id)&&<button className="outline-btn" onClick={()=>openEdit(item)}>Edit</button>}{canDelete(item.category_id)&&<button className="danger-icon" onClick={()=>remove(item)} title="Delete item"><Trash2 size={14}/></button>}</div></div>
+        <div className="recipe-card-head"><div><div className="eyebrow">{visibleCategories.find(c=>c.id===item.category_id)?.name || 'CATALOGUE ITEM'}</div><h3>{item.name}</h3></div><div className="recipe-actions">{canEdit(item.category_id)&&<button className="outline-btn" onClick={()=>openEdit(item)}>Edit</button>}{canDelete(item.category_id)&&<button className="danger-icon" onClick={()=>remove(item)} title="Delete item"><Trash2 size={14}/></button>}</div></div>
         {item.description && <p className="recipe-description">{item.description}</p>}
         <div className="catalogue-price-row"><span>PRICE</span><strong>{money(item.price)}</strong></div>
       </article>)}
     </div> : <div className="crafting-empty">{items.length ? 'No catalogue items match your search or category.' : 'No catalogue items have been added yet.'}</div>}
-    {categories.filter(c=>canAdd(c.id) && (selectedCategory==='all' || selectedCategory===c.id)).map(c=><button key={c.id} className="primary catalogue-add" onClick={()=>openNew(c.id)}><Plus size={15}/> Add item to {c.name}</button>)}
-    {categoryEditor!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setCategoryEditor(null);}}><div className="modal editor-modal catalogue-modal">
+    {visibleCategories.filter(c=>canAdd(c.id) && (selectedCategory==='all' || selectedCategory===c.id)).map(c=><button key={c.id} className="primary catalogue-add" onClick={()=>openNew(c.id)}><Plus size={15}/> Add item to {c.name}</button>)}
+    {!previewReadOnly && categoryEditor!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setCategoryEditor(null);}}><div className="modal editor-modal catalogue-modal">
       <button className="modal-close" onClick={()=>setCategoryEditor(null)}><X/></button>
       <div className="eyebrow">{categoryEditor==='new'?'NEW CATALOGUE CATEGORY':'EDIT CATALOGUE CATEGORY'}</div>
       <h2>{categoryEditor==='new'?'Add category':'Rename category'}</h2>
@@ -122,7 +125,7 @@ export default function CataloguePanel({ isOwner, onClose }) {
         <div className="modal-actions"><button type="button" className="outline-btn" onClick={()=>setCategoryEditor(null)}>Cancel</button><button className="primary" disabled={categoryBusy}><Save size={15}/>{categoryBusy?'Saving...':'Save category'}</button></div>
       </form>
     </div></div>}
-    {editing!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setEditing(null);}}><div className="modal editor-modal recipe-modal catalogue-modal">
+    {!previewReadOnly && editing!==null && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setEditing(null);}}><div className="modal editor-modal recipe-modal catalogue-modal">
       <button className="modal-close" onClick={()=>setEditing(null)}><X/></button><div className="eyebrow">{editing==='new'?'NEW CATALOGUE ITEM':'EDIT CATALOGUE ITEM'}</div><h2>{editing==='new'?'Add item':'Edit item'}</h2>
       <form onSubmit={save}>
         <label>Item name<input required maxLength="120" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="e.g. Vehicle import"/></label>
