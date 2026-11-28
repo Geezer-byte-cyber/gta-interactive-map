@@ -66,9 +66,11 @@ BEGIN
     WHERE p.user_id = v_user AND p.role = 'owner'
   ) AND NOT EXISTS (
     SELECT 1 FROM public.user_module_permissions m
-    WHERE m.user_id = v_user AND m.can_view_storages = TRUE AND m.can_edit_storages = TRUE
+    WHERE m.user_id = v_user AND m.can_view_storages = TRUE
+      AND ((p_action = 'add' AND m.can_add_storages = TRUE)
+        OR (p_action = 'remove' AND m.can_edit_storages = TRUE))
   ) THEN
-    RAISE EXCEPTION 'You do not have permission to update storage contents.';
+    RAISE EXCEPTION 'You do not have permission to perform this inventory action.';
   END IF;
 
   IF NULLIF(TRIM(p_item_name), '') IS NULL OR p_action NOT IN ('add', 'remove')
