@@ -455,7 +455,7 @@ export default function AdminPanel({ onClose }) {
             <p>No user accounts found.</p>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
-              {users.map(user => (
+              {[...users].sort((a, b) => (a.account_type === 'customer' ? 1 : 0) - (b.account_type === 'customer' ? 1 : 0) || a.username.localeCompare(b.username)).map(user => (
                 <div
                   key={user.user_id}
                   style={{
