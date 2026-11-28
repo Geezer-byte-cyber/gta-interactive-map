@@ -66,10 +66,12 @@ export default function AdminPanel({ onClose }) {
   const [categories, setCategories] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [permissions, setPermissions] = useState([]);
-  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false });
+  const [moduleAccess, setModuleAccess] = useState({ can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false });
+  const [accountMarker, setAccountMarker] = useState('knox');
 
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newAccountType, setNewAccountType] = useState('knox');
   const [passwordUser, setPasswordUser] = useState('');
   const [replacementPassword, setReplacementPassword] = useState('');
 
@@ -127,7 +129,8 @@ export default function AdminPanel({ onClose }) {
       return;
     }
 
-    setModuleAccess(selectedUser.moduleAccess || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false });
+    setAccountMarker(selectedUser.account_type || 'knox');
+    setModuleAccess(selectedUser.moduleAccess || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false });
     setPermissions(
       categories.map(category => {
         const existing = selectedUser.permissions?.find(
@@ -188,11 +191,13 @@ export default function AdminPanel({ onClose }) {
       await invoke({
         action: 'create',
         username,
-        password: newPassword
+        password: newPassword,
+        accountType: newAccountType
       });
 
       setNewUsername('');
       setNewPassword('');
+      setNewAccountType('knox');
       setNotice(`Account "${username}" created successfully.`);
       await loadUsers();
     } catch (error) {
@@ -213,7 +218,8 @@ export default function AdminPanel({ onClose }) {
         action: 'updatePermissions',
         userId: selectedUser.user_id,
         permissions,
-        moduleAccess
+        moduleAccess,
+        accountType: accountMarker
       });
 
       setNotice('User permissions saved successfully.');
@@ -382,6 +388,11 @@ export default function AdminPanel({ onClose }) {
               </label>
 
               <label style={{ fontSize: 12 }}>
+                Account marker
+                <select style={inputStyle} value={newAccountType} onChange={e => setNewAccountType(e.target.value)}><option value="knox">Knox</option><option value="customer">Customer</option></select>
+              </label>
+
+              <label style={{ fontSize: 12 }}>
                 Initial password
                 <input
                   style={inputStyle}
@@ -504,6 +515,10 @@ export default function AdminPanel({ onClose }) {
               {' '}Permissions for {selectedUser.username}
             </h3>
 
+            <label style={{ display: 'block', margin: '10px 0', fontSize: 12 }}>Account marker (visual only)
+              <select style={inputStyle} value={accountMarker} onChange={e => setAccountMarker(e.target.value)} disabled={selectedUser.role === 'owner'}><option value="knox">Knox</option><option value="customer">Customer</option></select>
+            </label>
+
             {selectedUser.role === 'owner' ? (
               <p>The owner automatically has full access to every category.</p>
             ) : (
@@ -516,13 +531,20 @@ export default function AdminPanel({ onClose }) {
                     ['can_add_recipes', 'Add recipes'],
                     ['can_edit_recipes', 'Edit recipes'],
                     ['can_delete_recipes', 'Delete recipes'],
-                    ['can_view_hidden_recipes', 'View hidden recipes']
+                    ['can_view_hidden_recipes', 'View hidden recipes'],
+                    ['can_view_orders', 'View Orders desk'],
+                    ['can_create_orders', 'Create orders'],
+                    ['can_edit_orders', 'Edit orders / update status'],
+                    ['can_delete_orders', 'Delete orders'],
+                    ['can_manage_customers', 'Create customer accounts'],
+                    ['can_view_own_orders', 'Customer portal: view assigned orders']
                   ].map(([key, label]) => (
                     <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12 }}>
                       <input type="checkbox" checked={moduleAccess[key] === true}
                         disabled={(['can_add_recipes','can_edit_recipes','can_delete_recipes','can_view_hidden_recipes'].includes(key)) && !moduleAccess.can_view_crafting || (['can_create_orders','can_edit_orders','can_delete_orders'].includes(key)) && !moduleAccess.can_view_orders}
                         onChange={e => setModuleAccess(current => {
                           const next = { ...current, [key]: e.target.checked };
+                          if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; }
                           if (key === 'can_view_orders' && !e.target.checked) { next.can_create_orders = false; next.can_edit_orders = false; next.can_delete_orders = false; }
                           if (key === 'can_view_crafting' && !e.target.checked) {
                             next.can_add_recipes = false; next.can_edit_recipes = false; next.can_delete_recipes = false; next.can_view_hidden_recipes = false;
