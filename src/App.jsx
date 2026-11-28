@@ -139,6 +139,15 @@ function App() {
 
   useEffect(() => { localStorage.setItem('knox-hidden-categories', JSON.stringify(hiddenCategoryIds)); }, [hiddenCategoryIds]);
 
+  // Keep the last open panel across browser tab suspension and full page reloads.
+  // Store it per account so one user never inherits another user's last section.
+  useEffect(() => {
+    if (!session?.user?.id || !profile || !activeSection) return;
+    try {
+      localStorage.setItem(`knox-last-section-${session.user.id}`, activeSection);
+    } catch {}
+  }, [activeSection, session?.user?.id, profile]);
+
   const visiblePins = useMemo(
     () => pins.filter(p => canView(p.category) && !hiddenCategoryIds.includes(categories.find(c => c.name === p.category)?.id)),
     [pins, permissions, profile, categories, hiddenCategoryIds]
@@ -246,17 +255,22 @@ function App() {
       const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false };
       setModuleAccess(access);
       const mapAllowed = profileData.role === 'owner' || access.can_view_map === true;
+      const allowedSections = {
+        map: mapAllowed,
+        crafting: profileData.role === 'owner' || access.can_view_crafting === true,
+        storages: profileData.role === 'owner' || (profileData.account_type === 'knox' && access.can_view_storages === true),
+        orders: profileData.role === 'owner' || access.can_view_orders === true || access.can_view_own_orders === true,
+        catalogue: profileData.role === 'owner' || access.can_view_catalogue === true
+      };
+      let savedSection = '';
+      try {
+        savedSection = localStorage.getItem(`knox-last-section-${session.user.id}`) || '';
+      } catch {}
       setActiveSection(current => {
-        const allowed = {
-          map: mapAllowed,
-          crafting: profileData.role === 'owner' || access.can_view_crafting === true,
-          storages: profileData.role === 'owner' || (profileData.account_type === 'knox' && access.can_view_storages === true),
-          orders: profileData.role === 'owner' || access.can_view_orders === true || access.can_view_own_orders === true,
-          catalogue: profileData.role === 'owner' || access.can_view_catalogue === true
-        };
-        if (current && allowed[current]) return current;
-        if (allowed.map) return 'map';
-        return ['crafting', 'storages', 'orders', 'catalogue'].find(section => allowed[section]) || '';
+        if (current && allowedSections[current]) return current;
+        if (savedSection && allowedSections[savedSection]) return savedSection;
+        if (allowedSections.map) return 'map';
+        return ['crafting', 'storages', 'orders', 'catalogue'].find(section => allowedSections[section]) || '';
       });
 
       const { data: categoryData, error: categoryError } = mapAllowed
@@ -471,6 +485,9 @@ function App() {
 
   const logout = async () => {
     setAdminOpen(false);
+    try {
+      if (session?.user?.id) localStorage.removeItem(`knox-last-section-${session.user.id}`);
+    } catch {}
     await supabase.auth.signOut();
     setProfile(null);
     setPermissions([]);
