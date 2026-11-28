@@ -170,13 +170,28 @@ function App() {
     });
 
     const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_event, newSession) => {
+      supabase.auth.onAuthStateChange((event, newSession) => {
         setSession(newSession);
-        setProfile(null);
-        setPermissions([]);
-        setModuleAccess(null);
-        setActiveSection('map');
-        setAdminOpen(false);
+        // A token refresh can happen when returning to an idle browser tab.
+        // Do not reset the current section or profile for the same signed-in user.
+        if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
+
+        if (event === 'SIGNED_OUT' || !newSession) {
+          setProfile(null);
+          setPermissions([]);
+          setModuleAccess(null);
+          setActiveSection('map');
+          setAdminOpen(false);
+          return;
+        }
+
+        if (event === 'SIGNED_IN') {
+          setProfile(null);
+          setPermissions([]);
+          setModuleAccess(null);
+          setActiveSection('map');
+          setAdminOpen(false);
+        }
       });
 
     return () => {
@@ -231,7 +246,18 @@ function App() {
       const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false, can_view_orders: false, can_create_orders: false, can_edit_orders: false, can_delete_orders: false, can_manage_customers: false, can_view_own_orders: false, can_view_catalogue: false, can_view_storages: false, can_add_storages: false, can_edit_storages: false, can_delete_storages: false };
       setModuleAccess(access);
       const mapAllowed = profileData.role === 'owner' || access.can_view_map === true;
-      setActiveSection(mapAllowed ? 'map' : (profileData.role === 'owner' || access.can_view_crafting ? 'crafting' : (profileData.role === 'owner' || (profileData.account_type === 'knox' && access.can_view_storages) ? 'storages' : (profileData.role === 'owner' || access.can_view_orders || access.can_view_own_orders ? 'orders' : ''))));
+      setActiveSection(current => {
+        const allowed = {
+          map: mapAllowed,
+          crafting: profileData.role === 'owner' || access.can_view_crafting === true,
+          storages: profileData.role === 'owner' || (profileData.account_type === 'knox' && access.can_view_storages === true),
+          orders: profileData.role === 'owner' || access.can_view_orders === true || access.can_view_own_orders === true,
+          catalogue: profileData.role === 'owner' || access.can_view_catalogue === true
+        };
+        if (current && allowed[current]) return current;
+        if (allowed.map) return 'map';
+        return ['crafting', 'storages', 'orders', 'catalogue'].find(section => allowed[section]) || '';
+      });
 
       const { data: categoryData, error: categoryError } = mapAllowed
         ? await supabase.from('map_categories').select('*').order('name')
