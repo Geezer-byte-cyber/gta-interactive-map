@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         ? staffAccess?.can_view_orders === true
         : staffAccess?.can_manage_customers === true;
     }
-    if (ownerProfile?.role !== "owner" && !(["createCustomer", "listOrderCustomers", "updateCustomerPassword"].includes(action) && canManageCustomers)) {
+    if (ownerProfile?.role !== "owner" && !(["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action) && canManageCustomers)) {
       return fail("Only the owner or an authorised customer manager can perform this action", 403);
     }
 
