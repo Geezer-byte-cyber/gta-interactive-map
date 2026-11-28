@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS public.catalogue_item_access (
 CREATE INDEX IF NOT EXISTS catalogue_items_category_idx ON public.catalogue_items(category_id);
 CREATE INDEX IF NOT EXISTS catalogue_item_access_user_idx ON public.catalogue_item_access(user_id);
 
+ALTER TABLE public.user_module_permissions
+  ADD COLUMN IF NOT EXISTS can_view_catalogue BOOLEAN NOT NULL DEFAULT FALSE;
+
 ALTER TABLE public.catalogue_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalogue_category_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalogue_items ENABLE ROW LEVEL SECURITY;
@@ -95,3 +98,8 @@ USING (
 DROP POLICY IF EXISTS catalogue_item_access_self_read ON public.catalogue_item_access;
 CREATE POLICY catalogue_item_access_self_read ON public.catalogue_item_access FOR SELECT TO authenticated
 USING (user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.user_profiles p WHERE p.user_id = auth.uid() AND p.role = 'owner'));
+
+DROP POLICY IF EXISTS catalogue_item_access_owner_write ON public.catalogue_item_access;
+CREATE POLICY catalogue_item_access_owner_write ON public.catalogue_item_access FOR ALL TO authenticated
+USING (EXISTS (SELECT 1 FROM public.user_profiles p WHERE p.user_id = auth.uid() AND p.role = 'owner'))
+WITH CHECK (EXISTS (SELECT 1 FROM public.user_profiles p WHERE p.user_id = auth.uid() AND p.role = 'owner'));
