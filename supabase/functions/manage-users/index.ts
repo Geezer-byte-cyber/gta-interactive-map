@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
           return {
             categoryId: category.id,
             categoryName: category.name,
-            canView: profile.role === "owner" || (profile.account_type === "customer" && !!permission),
+            canView: profile.role === "owner" || (profile.account_type === "knox" && ((moduleResult.data || []).find(item => item.user_id === profile.user_id)?.can_view_catalogue === true)) || (profile.account_type === "customer" && !!permission),
             canAdd: profile.role === "owner" || !!permission?.can_add,
             canEdit: profile.role === "owner" || !!permission?.can_edit,
             canDelete: profile.role === "owner" || !!permission?.can_delete,
