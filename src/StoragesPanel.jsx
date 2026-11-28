@@ -261,7 +261,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
             <div className="storage-panel-title"><h3><History size={17}/> Movement history</h3><span className="eyebrow">LATEST 25</span></div>
             {!movements.length ? <p className="storage-history-empty">No movements logged yet.</p> : movements.map(move => <div className="storage-movement" key={move.id}>
               <span className={move.action === 'add' ? 'storage-movement-add' : 'storage-movement-remove'}>{move.action === 'add' ? '+' : '−'}{move.quantity}</span>
-              <div><strong>{move.item_name}</strong><span>{move.action === 'add' ? 'Added' : 'Removed'} · {formatWeight(move.unit_weight)} each · {formatWeight(move.quantity * move.unit_weight)} total weight</span><small>Logged by {move.logged_by_username || 'Unknown user'} · {new Date(move.created_at).toLocaleString()}</small></div>
+              <div><strong>{move.item_name}</strong><span>{move.action === 'add' ? 'Added' : 'Removed'} · {formatWeight(move.unit_weight)} each · {formatWeight(move.quantity * move.unit_weight)} total weight</span><small>Logged by {move.logged_by_username?.toLowerCase() === 'owner' ? 'James' : (move.logged_by_username || 'Unknown user')} · {new Date(move.created_at).toLocaleString()}</small></div>
             </div>)}
           </section>
         </div>
