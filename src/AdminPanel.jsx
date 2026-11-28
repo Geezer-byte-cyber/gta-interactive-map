@@ -462,7 +462,7 @@ export default function AdminPanel({ onClose }) {
                   }}
                 >
                   <div>
-                    <strong>{user.username}</strong>
+                    <strong>{user.username} <span className={user.account_type === 'customer' ? 'account-type-badge customer-badge' : 'account-type-badge knox-badge'}>{user.account_type === 'customer' ? 'CUSTOMER' : 'KNOX'}</span></strong>
                     <div style={{
                       color: '#a99a8d',
                       fontSize: 10,
