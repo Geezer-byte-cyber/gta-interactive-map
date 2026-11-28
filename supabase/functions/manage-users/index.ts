@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
             .select("user_id, category_id, can_add, can_edit, can_delete"),
           admin
             .from("user_module_permissions")
-            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes"),
+            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes"),
         ]);
 
       if (profilesResult.error) {
@@ -249,8 +249,8 @@ Deno.serve(async (req) => {
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
         moduleAccess: profile.role === "owner"
-          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true }
-          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false }),
+          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true, can_view_hidden_recipes: true }
+          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false, can_view_hidden_recipes: false }),
         permissions: (categoriesResult.data || []).map((category) => {
           const permission = (permissionsResult.data || []).find(
             (item) =>
