@@ -102,39 +102,46 @@ function App() {
 
   // Admin Panel is closed by default.
   const [adminOpen, setAdminOpen] = useState(false);
+  const [previewUser, setPreviewUser] = useState(null);
+  const isPreview = !!previewUser;
 
   const [mapUrl] = useState('/los-santos-map.jpg');
 
-  const isOwner = profile?.role === 'owner';
+  const isOwner = profile?.role === 'owner' && !isPreview;
+  const effectiveProfile = previewUser ? { ...profile, username: previewUser.username, role: 'user', account_type: previewUser.account_type } : profile;
+  const effectiveModuleAccess = previewUser ? previewUser.moduleAccess : moduleAccess;
+  const effectivePermissions = previewUser
+    ? (previewUser.permissions || []).map(p => ({ category_id: p.categoryId, category_name: p.categoryName, can_add: false, can_edit: false, can_delete: false }))
+    : permissions;
   const isSignedIn = !!session && !!profile;
-  const hasMapAccess = isOwner || moduleAccess?.can_view_map === true;
-  const hasCraftingAccess = isOwner || moduleAccess?.can_view_crafting === true;
-  const hasOrdersAccess = isOwner || moduleAccess?.can_view_orders === true;
-  const hasCatalogueAccess = isOwner || moduleAccess?.can_view_catalogue === true;
-  const hasStoragesAccess = isOwner || (profile?.account_type === 'knox' && moduleAccess?.can_view_storages === true);
-  const hasOwnOrdersAccess = isOwner || moduleAccess?.can_view_own_orders === true;
+  const hasMapAccess = isOwner || effectiveModuleAccess?.can_view_map === true;
+  const hasCraftingAccess = isOwner || effectiveModuleAccess?.can_view_crafting === true;
+  const hasOrdersAccess = isOwner || effectiveModuleAccess?.can_view_orders === true;
+  const hasCatalogueAccess = isOwner || effectiveModuleAccess?.can_view_catalogue === true;
+  const hasStoragesAccess = isOwner || (effectiveProfile?.account_type === 'knox' && effectiveModuleAccess?.can_view_storages === true);
+  const hasOwnOrdersAccess = isOwner || effectiveModuleAccess?.can_view_own_orders === true;
 
   const permissionFor = (categoryName) =>
-    permissions.find(p => p.category_name === categoryName);
+    effectivePermissions.find(p => p.category_name === categoryName);
 
   const canView = (categoryName) =>
     isOwner || !!permissionFor(categoryName);
 
   const canAdd = (categoryName) =>
-    isOwner || permissionFor(categoryName)?.can_add === true;
+    !isPreview && (isOwner || permissionFor(categoryName)?.can_add === true);
 
   const canEdit = (categoryName) =>
-    isOwner || permissionFor(categoryName)?.can_edit === true;
+    !isPreview && (isOwner || permissionFor(categoryName)?.can_edit === true);
 
   const canDelete = (categoryName) =>
-    isOwner || permissionFor(categoryName)?.can_delete === true;
+    !isPreview && (isOwner || permissionFor(categoryName)?.can_delete === true);
 
   const visibleCategories = useMemo(
     () => categories.filter(c =>
-      profile?.role === 'owner' ||
-      permissions.some(p => p.category_id === c.id)
+      isOwner ||
+      effectivePermissions.some(p => p.category_id === c.id)
     ),
-    [categories, permissions, profile]
+    [categories, effectivePermissions, isOwner, isPreview]
   );
 
   useEffect(() => { localStorage.setItem('knox-hidden-categories', JSON.stringify(hiddenCategoryIds)); }, [hiddenCategoryIds]);
@@ -150,7 +157,7 @@ function App() {
 
   const visiblePins = useMemo(
     () => pins.filter(p => canView(p.category) && !hiddenCategoryIds.includes(categories.find(c => c.name === p.category)?.id)),
-    [pins, permissions, profile, categories, hiddenCategoryIds]
+    [pins, effectivePermissions, isOwner, categories, hiddenCategoryIds]
   );
 
   const filtered = useMemo(() =>
@@ -830,7 +837,8 @@ function App() {
             <span>Unofficial fan-made community project</span>
           </div>
 
-          {notice && (
+          {isPreview && <div style={{position:'fixed',zIndex:2500,top:70,left:'50%',transform:'translateX(-50%)',background:'#382517',border:'1px solid #ff8a24',borderRadius:6,padding:'9px 14px',color:'#fff',display:'flex',alignItems:'center',gap:12,boxShadow:'0 5px 20px #0009'}}><strong>READ-ONLY PREVIEW · {effectiveProfile.username}</strong><button className="outline-btn" onClick={() => { setPreviewUser(null); setActiveSection('map'); }}>Exit preview</button></div>}
+      {notice && (
             <div className="toast" role="status" style={{ position: 'static', marginTop: 15 }}>
               {notice}
               <button onClick={() => setNotice('')}><X size={14}/></button>
@@ -860,7 +868,7 @@ function App() {
           {hasMapAccess && <button className={activeSection === 'map' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('map')}>Map</button>}
           <span className="live-dot">{activeSection === 'crafting' ? 'WORKSHOP ONLINE' : activeSection === 'orders' ? 'ORDER DESK ONLINE' : activeSection === 'catalogue' ? 'CATALOGUE ONLINE' : activeSection === 'storages' ? 'STORAGES ONLINE' : activeSection === 'map' ? 'MAP ONLINE' : 'ACCOUNT ONLINE'}</span>
           <span style={{ color: '#ffad66', fontSize: 11 }}>
-            {isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`} {profile?.account_type === 'customer' && <span className="account-type-badge customer-badge">CUSTOMER</span>} {profile?.account_type === 'knox' && <span className="account-type-badge knox-badge">KNOX</span>}
+            {isPreview ? `PREVIEW: ${effectiveProfile.username}` : isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`} {effectiveProfile?.account_type === 'customer' && <span className="account-type-badge customer-badge">CUSTOMER</span>} {effectiveProfile?.account_type === 'knox' && <span className="account-type-badge knox-badge">KNOX</span>}
           </span>
 
           {/* Only the owner is shown this button. */}
@@ -880,13 +888,13 @@ function App() {
       </header>
 
       {activeSection === 'catalogue' && hasCatalogueAccess ? (
-        <CataloguePanel isOwner={isOwner} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : '')))} />
+        <CataloguePanel isOwner={isOwner} previewReadOnly={isPreview} previewCategories={previewUser?.cataloguePermissions} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : '')))} />
       ) : activeSection === 'crafting' && hasCraftingAccess ? (
-        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes, canViewHidden: moduleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : ''))} />
+        <CraftingPanel permissions={{ isOwner, canAdd: (!isPreview && effectiveModuleAccess?.can_add_recipes), canEdit: (!isPreview && effectiveModuleAccess?.can_edit_recipes), canDelete: (!isPreview && effectiveModuleAccess?.can_delete_recipes), canViewHidden: effectiveModuleAccess?.can_view_hidden_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : ''))} />
       ) : activeSection === 'storages' && hasStoragesAccess ? (
-        <StoragesPanel isOwner={isOwner} accountType={profile?.account_type} permissions={{ canAdd: moduleAccess?.can_add_storages, canEdit: moduleAccess?.can_edit_storages, canDelete: moduleAccess?.can_delete_storages }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : (hasCatalogueAccess ? 'catalogue' : ''))))} />
+        <StoragesPanel isOwner={isOwner} accountType={effectiveProfile?.account_type} permissions={{ canAdd: (!isPreview && effectiveModuleAccess?.can_add_storages), canEdit: (!isPreview && effectiveModuleAccess?.can_edit_storages), canDelete: (!isPreview && effectiveModuleAccess?.can_delete_storages) }} onClose={() => setActiveSection(hasMapAccess ? 'map' : (hasCraftingAccess ? 'crafting' : (hasOrdersAccess || hasOwnOrdersAccess ? 'orders' : (hasCatalogueAccess ? 'catalogue' : ''))))} />
       ) : activeSection === 'orders' && (hasOrdersAccess || hasOwnOrdersAccess) ? (
-        <OrdersPanel isCustomer={!isOwner && !hasOrdersAccess && hasOwnOrdersAccess} canManage={isOwner || hasOrdersAccess} canCreate={isOwner || moduleAccess?.can_create_orders === true} canEdit={isOwner || moduleAccess?.can_edit_orders === true} canDelete={isOwner || moduleAccess?.can_delete_orders === true} canManageCustomers={isOwner || moduleAccess?.can_manage_customers === true} username={profile?.username || ''} />
+        <OrdersPanel isCustomer={!isOwner && !hasOrdersAccess && hasOwnOrdersAccess} canManage={!isPreview && (isOwner || hasOrdersAccess)} canCreate={!isPreview && (isOwner || effectiveModuleAccess?.can_create_orders === true)} canEdit={!isPreview && (isOwner || effectiveModuleAccess?.can_edit_orders === true)} canDelete={!isPreview && (isOwner || effectiveModuleAccess?.can_delete_orders === true)} canManageCustomers={!isPreview && (isOwner || effectiveModuleAccess?.can_manage_customers === true)} username={effectiveProfile?.username || ''} previewUserId={isPreview && effectiveProfile?.account_type === 'customer' ? previewUser.user_id : null} previewReadOnly={isPreview} />
       ) : hasMapAccess ? (
       <main className="layout">
         <aside className="sidebar">
@@ -1229,7 +1237,7 @@ function App() {
 
       {/* The Admin Panel is rendered only when the signed-in profile is the owner. */}
       {isOwner && adminOpen && (
-        <AdminPanel onClose={() => setAdminOpen(false)} />
+        <AdminPanel onClose={() => setAdminOpen(false)} onPreview={user => { setPreviewUser(user); setAdminOpen(false); setActiveSection(user.moduleAccess?.can_view_catalogue ? 'catalogue' : user.moduleAccess?.can_view_orders || user.moduleAccess?.can_view_own_orders ? 'orders' : user.moduleAccess?.can_view_crafting ? 'crafting' : user.moduleAccess?.can_view_storages ? 'storages' : 'map'); }} />
       )}
 
       {editing !== null && !rangeDrawing && (
