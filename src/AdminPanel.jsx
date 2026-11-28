@@ -612,7 +612,7 @@ export default function AdminPanel({ onClose }) {
                   </table>
                 </div>
 
-                {selectedUser.account_type === 'customer' ? (
+                {accountMarker === 'customer' ? (
                   <div style={{ border: '1px solid #59391f', borderRadius: 6, padding: 12, margin: '16px 0' }}>
                     <h4 style={{ margin: '0 0 8px', color: '#ffad66' }}>Catalogue category access</h4>
                     <p style={{ fontSize: 12, color: '#b9a99a' }}>Choose which catalogue categories this customer can see. These settings do not affect Knox accounts.</p>
