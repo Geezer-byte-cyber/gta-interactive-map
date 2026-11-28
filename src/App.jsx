@@ -267,8 +267,10 @@ function App() {
         savedSection = localStorage.getItem(`knox-last-section-${session.user.id}`) || '';
       } catch {}
       setActiveSection(current => {
-        if (current && allowedSections[current]) return current;
+        // On a fresh page load, the initial state is always "map".
+        // Prefer the saved section so that initial default cannot mask it.
         if (savedSection && allowedSections[savedSection]) return savedSection;
+        if (current && allowedSections[current]) return current;
         if (allowedSections.map) return 'map';
         return ['crafting', 'storages', 'orders', 'catalogue'].find(section => allowedSections[section]) || '';
       });
