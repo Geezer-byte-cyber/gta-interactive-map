@@ -152,17 +152,19 @@ Deno.serve(async (req) => {
     }
 
     let canManageCustomers = ownerProfile?.role === "owner";
-    if (!canManageCustomers && ["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action)) {
+    let canViewOrdersDesk = ownerProfile?.role === "owner";
+    if (ownerProfile?.role !== "owner" && ["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action)) {
       const { data: staffAccess, error: staffAccessError } = await admin
         .from("user_module_permissions").select("can_manage_customers, can_view_orders")
         .eq("user_id", authData.user.id).maybeSingle();
       if (staffAccessError) return fail("Could not verify customer-management permission", 500);
-      canManageCustomers = action === "listOrderCustomers"
-        ? staffAccess?.can_view_orders === true
-        : staffAccess?.can_manage_customers === true;
+      canManageCustomers = staffAccess?.can_manage_customers === true;
+      canViewOrdersDesk = staffAccess?.can_view_orders === true;
     }
-    if (ownerProfile?.role !== "owner" && !(["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action) && canManageCustomers)) {
-      return fail("Only the owner or an authorised customer manager can perform this action", 403);
+    const customerActionAllowed = ownerProfile?.role === "owner" ||
+      (action === "listOrderCustomers" ? canViewOrdersDesk : canManageCustomers);
+    if (["createCustomer", "listOrderCustomers", "updateCustomerPassword", "updateCustomerCatalogueAccess"].includes(action) && !customerActionAllowed) {
+      return fail("Only staff with the required customer-management permission can perform this action", 403);
     }
 
     if (action === "createCustomer" || action === "listOrderCustomers" || action === "updateCustomerPassword" || action === "updateCustomerCatalogueAccess") {
@@ -209,11 +211,16 @@ Deno.serve(async (req) => {
           admin.from("catalogue_category_permissions").select("user_id, category_id"),
         ]);
         if (profileListError || moduleListError || categoryListError || categoryRowsError) return fail("Could not load customer accounts", 500);
-        return respond({ catalogueCategories: categories || [], customers: (profiles || []).map(item => {
+        const customers = (profiles || []).map(item => {
           const module = (modules || []).find(row => row.user_id === item.user_id);
+          const canViewOwnOrders = module?.can_view_own_orders === true;
+          if (!canManageCustomers) return canViewOwnOrders ? { ...item, canViewOwnOrders: true } : null;
           const allowedIds = new Set((categoryRows || []).filter(row => row.user_id === item.user_id).map(row => row.category_id));
-          return { ...item, canViewCatalogue: module?.can_view_catalogue === true, canViewOwnOrders: module?.can_view_own_orders === true, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
-        }) });
+          return { ...item, canViewCatalogue: module?.can_view_catalogue === true, canViewOwnOrders, catalogueCategories: (categories || []).map(category => ({ ...category, canView: allowedIds.has(category.id) })) };
+        }).filter(Boolean);
+        return canManageCustomers
+          ? respond({ catalogueCategories: categories || [], customers })
+          : respond({ customers });
       }
       const username = String(body.username || "").trim().toLowerCase();
       const password = String(body.password || "");
