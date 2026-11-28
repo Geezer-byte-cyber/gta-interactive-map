@@ -6,6 +6,7 @@ import {
 import L from 'leaflet';
 import { supabase, configured } from './supabase';
 import AdminPanel from './AdminPanel';
+import CraftingPanel from './CraftingPanel';
 import {
   Search, Plus, LogOut, X, Save, Trash2,
   Image as ImageIcon, MapPin, SlidersHorizontal,
@@ -64,6 +65,8 @@ function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [moduleAccess, setModuleAccess] = useState(null);
+  const [activeSection, setActiveSection] = useState('map');
   const [authLoading, setAuthLoading] = useState(true);
 
   const [username, setUsername] = useState('');
@@ -101,6 +104,8 @@ function App() {
 
   const isOwner = profile?.role === 'owner';
   const isSignedIn = !!session && !!profile;
+  const hasMapAccess = isOwner || moduleAccess?.can_view_map === true;
+  const hasCraftingAccess = isOwner || moduleAccess?.can_view_crafting === true;
 
   const permissionFor = (categoryName) =>
     permissions.find(p => p.category_name === categoryName);
@@ -162,6 +167,8 @@ function App() {
         setSession(newSession);
         setProfile(null);
         setPermissions([]);
+        setModuleAccess(null);
+        setActiveSection('map');
         setAdminOpen(false);
       });
 
@@ -178,6 +185,7 @@ function App() {
       if (!session?.user?.id) {
         setProfile(null);
         setPermissions([]);
+        setModuleAccess(null);
         setPins([]);
         setCategories([]);
         setAdminOpen(false);
@@ -185,7 +193,8 @@ function App() {
       }
 
       const [{ data: profileData, error: profileError },
-        { data: permissionData, error: permissionError }] =
+        { data: permissionData, error: permissionError },
+        { data: moduleData, error: moduleError }] =
         await Promise.all([
           supabase.from('user_profiles')
             .select('user_id, username, role')
@@ -193,7 +202,10 @@ function App() {
             .maybeSingle(),
           supabase.from('user_category_permissions')
             .select('category_id, can_add, can_edit, can_delete')
-            .eq('user_id', session.user.id)
+            .eq('user_id', session.user.id),
+          supabase.from('user_module_permissions')
+            .select('can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes')
+            .eq('user_id', session.user.id).maybeSingle()
         ]);
 
       if (!alive) return;
@@ -204,15 +216,18 @@ function App() {
         return;
       }
 
-      if (permissionError) {
-        setNotice(permissionError.message);
+      if (permissionError || moduleError) {
+        setNotice(permissionError?.message || moduleError?.message || 'Could not load access permissions.');
         return;
       }
 
-      const { data: categoryData, error: categoryError } =
-        await supabase.from('map_categories')
-          .select('*')
-          .order('name');
+      const access = moduleData || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false };
+      setModuleAccess(access);
+      const mapAllowed = profileData.role === 'owner' || access.can_view_map === true;
+      if (profileData.role !== 'owner' && !access.can_view_crafting) setActiveSection('map');
+      const { data: categoryData, error: categoryError } = mapAllowed
+        ? await supabase.from('map_categories').select('*').order('name')
+        : { data: [], error: null };
 
       if (!alive) return;
 
@@ -229,16 +244,16 @@ function App() {
       setProfile(profileData);
       setPermissions(permissionRows);
       setCategories(categoryData || []);
+      if (!mapAllowed) { setPins([]); setSelectedPosition(null); setEditing(null); }
 
       // Never leave the Admin Panel open for a non-owner.
       if (profileData.role !== 'owner') {
         setAdminOpen(false);
       }
 
-      const { data: pinData, error: pinError } = await supabase
-        .from('pins')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: pinData, error: pinError } = mapAllowed
+        ? await supabase.from('pins').select('*').order('created_at', { ascending: false })
+        : { data: [], error: null };
 
       if (!alive) return;
 
@@ -254,7 +269,7 @@ function App() {
   }, [session]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !hasMapAccess) return;
 
     const pinsChannel = supabase
       .channel('knox-pins')
@@ -290,9 +305,10 @@ function App() {
       supabase.removeChannel(pinsChannel);
       supabase.removeChannel(categoriesChannel);
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, hasMapAccess]);
 
   const loadPins = async () => {
+    if (!hasMapAccess) return;
     const { data, error } = await supabase
       .from('pins')
       .select('*')
@@ -303,6 +319,7 @@ function App() {
   };
 
   const loadCategories = async () => {
+    if (!hasMapAccess) return;
     const { data, error } = await supabase
       .from('map_categories')
       .select('*')
@@ -423,6 +440,8 @@ function App() {
     await supabase.auth.signOut();
     setProfile(null);
     setPermissions([]);
+    setModuleAccess(null);
+    setActiveSection('map');
     setPins([]);
     setCategories([]);
     setSelectedPosition(null);
@@ -781,7 +800,9 @@ function App() {
         </div>
 
         <div className="top-actions">
-          <span className="live-dot">MAP ONLINE</span>
+          {hasMapAccess && <button className={activeSection === 'map' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('map')}>Map</button>}
+          {hasCraftingAccess && <button className={activeSection === 'crafting' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('crafting')}>Crafting</button>}
+          <span className="live-dot">{activeSection === 'crafting' ? 'WORKSHOP ONLINE' : hasMapAccess ? 'MAP ONLINE' : 'ACCOUNT ONLINE'}</span>
           <span style={{ color: '#ffad66', fontSize: 11 }}>
             {isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`}
           </span>
@@ -802,6 +823,9 @@ function App() {
         </div>
       </header>
 
+      {activeSection === 'crafting' && hasCraftingAccess ? (
+        <CraftingPanel permissions={{ isOwner, canAdd: moduleAccess?.can_add_recipes, canEdit: moduleAccess?.can_edit_recipes, canDelete: moduleAccess?.can_delete_recipes }} onClose={() => setActiveSection(hasMapAccess ? 'map' : '')} />
+      ) : hasMapAccess ? (
       <main className="layout">
         <aside className="sidebar">
           <div className="side-heading">
@@ -1130,6 +1154,9 @@ function App() {
           </div>
         </section>
       </main>
+      ) : (
+        <div className="no-sections"><div className="brand-mark">K</div><h2>THE KNOX MAP</h2><p>Your account does not currently have access to a section.</p></div>
+      )}
 
       {notice && (
         <div className="toast" role="status">
