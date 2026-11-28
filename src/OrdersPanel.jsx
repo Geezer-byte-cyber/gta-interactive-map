@@ -148,7 +148,7 @@ export default function OrdersPanel({ isCustomer = false, canManage = false, can
 
   return <section className="orders-page">
     <div className="orders-heading">
-      <div><div className="eyebrow">THE KNOX MAP · TICKET DESK</div><h2>{isCustomer ? 'My Orders' : 'Orders & Tickets'}</h2><p>{isCustomer ? 'View the progress of your orders.' : 'Create orders, track progress and keep customer requests organised.'}</p></div>
+      <div><div className="eyebrow">KNOX HQ · TICKET DESK</div><h2>{isCustomer ? 'My Orders' : 'Orders & Tickets'}</h2><p>{isCustomer ? 'View the progress of your orders.' : 'Create orders, track progress and keep customer requests organised.'}</p></div>
       {!isCustomer && (canCreate || canManageCustomers) && <div className="orders-heading-actions">{canManageCustomers && <button className="outline-btn" onClick={() => setShowCustomerForm(v => !v)}><UserPlus size={15}/> Customer account</button>}{canCreate && <button className="primary" onClick={openNew}><Plus size={15}/> New order</button>}</div>}
     </div>
     <div className="orders-toolbar"><label className="search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..."/></label><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select><button className="small-btn" onClick={load}><RefreshCw size={13}/> Refresh</button></div>
