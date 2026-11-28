@@ -1166,3 +1166,14 @@ button {
 .storage-movement small{font-size:9px;color:#8e7d70}
 @media(max-width:850px){.storage-inventory-layout{grid-template-columns:1fr}}
 @media(max-width:520px){.storage-capacity{padding:12px;gap:8px}.storage-capacity>div>strong{font-size:17px}.storage-item-controls{flex-wrap:wrap}.storage-item-controls select{min-width:110px}.storage-add-fields{grid-template-columns:1fr 1fr}}
+
+
+/* Storage item search — matches the Knox dark/orange controls */
+.storage-item-search{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:0 12px;background:#0c0907;border:1px solid #59391f;border-radius:5px;color:#a98a72;transition:border-color .18s,box-shadow .18s}
+.storage-item-search:focus-within{border-color:#ff8a24;box-shadow:0 0 0 2px rgba(255,138,36,.12)}
+.storage-item-search>svg{flex:none;color:#ffad66}
+.storage-item-search input{flex:1;width:100%;min-width:0;padding:12px 0;background:transparent!important;border:0!important;outline:none!important;box-shadow:none!important;color:#f5eee8;font:inherit;font-size:12px}
+.storage-item-search input::placeholder{color:#8e7d70}
+.storage-item-search input::-webkit-search-cancel-button{-webkit-appearance:none}
+.storage-search-clear{flex:none;padding:5px 8px;background:#24160d;border:1px solid #59391f;border-radius:4px;color:#ffad66;font-size:10px;font-weight:700;cursor:pointer}
+.storage-search-clear:hover{border-color:#ff8a24;background:#2d1b0f}
