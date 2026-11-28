@@ -810,7 +810,7 @@ function App() {
           {(hasOrdersAccess || hasOwnOrdersAccess) && <button className={activeSection === 'orders' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('orders')}>Orders</button>}
           {hasCraftingAccess && <button className={activeSection === 'crafting' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('crafting')}>Crafting</button>}
           {hasMapAccess && <button className={activeSection === 'map' ? 'outline-btn section-active' : 'outline-btn'} onClick={() => setActiveSection('map')}>Map</button>}
-          <span className="live-dot">{activeSection === 'crafting' ? 'WORKSHOP ONLINE' : activeSection === 'orders' ? 'ORDER DESK ONLINE' : hasMapAccess ? 'MAP ONLINE' : 'ACCOUNT ONLINE'}</span>
+          <span className="live-dot">{activeSection === 'crafting' ? 'WORKSHOP ONLINE' : activeSection === 'orders' ? 'ORDER DESK ONLINE' : activeSection === 'catalogue' ? 'CATALOGUE ONLINE' : activeSection === 'map' ? 'MAP ONLINE' : 'ACCOUNT ONLINE'}</span>
           <span style={{ color: '#ffad66', fontSize: 11 }}>
             {isOwner ? 'OWNER' : `SIGNED IN: ${profile.username}`} {profile?.account_type === 'customer' && <span className="account-type-badge customer-badge">CUSTOMER</span>} {profile?.account_type === 'knox' && <span className="account-type-badge knox-badge">KNOX</span>}
           </span>
