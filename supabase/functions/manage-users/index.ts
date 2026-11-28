@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
             .select("user_id, category_id, can_add, can_edit, can_delete"),
           admin
             .from("user_module_permissions")
-            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes"),
+            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes, can_view_hidden_recipes, can_view_orders, can_create_orders, can_edit_orders, can_delete_orders, can_manage_customers, can_view_own_orders"),
         ]);
 
       if (profilesResult.error) {
