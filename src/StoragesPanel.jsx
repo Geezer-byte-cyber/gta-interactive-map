@@ -217,7 +217,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, letterSpacing: 0 }}><Copy size={14}/>{revealedId === storage.id ? 'Copied' : 'Copy PIN'}</span>
                 </button>
                 <div className="eyebrow" style={{ marginTop: 8 }}>{revealedId === storage.id ? 'PIN VISIBLE FOR 3 SECONDS' : 'PIN HIDDEN • CLICK TO COPY'}</div>
-                <div className="storage-open-hint"><Package size={14}/> CLICK TO VIEW CONTENTS & LOG MOVEMENTS</div>
+                <div className="storage-open-hint"><Package size={14}/> {readOnly ? 'CLICK TO VIEW CONTENTS & MOVEMENT HISTORY' : 'CLICK TO VIEW CONTENTS & LOG MOVEMENTS'}</div>
               </article>
             ))}
           </div>
@@ -242,7 +242,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
               <input type="search" aria-label="Search storage items" placeholder="Search items by name..." value={itemSearch} onChange={e => setItemSearch(e.target.value)} />
               {itemSearch && <button type="button" className="storage-search-clear" onClick={() => setItemSearch('')}>Clear</button>}
             </div>
-            {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : !filteredItems.length ? <div className="crafting-empty">No items match “{itemSearch}”.</div> : filteredItems.map(item => {
+            {!items.length ? <div className="crafting-empty">{readOnly ? 'This storage has no items yet.' : 'This storage is empty. Add the first item below.'}</div> : !filteredItems.length ? <div className="crafting-empty">No items match “{itemSearch}”.</div> : filteredItems.map(item => {
               const row = rowActions[item.id] || { quantity: '1' };
               return <div className="storage-item-row" key={item.id}>
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
