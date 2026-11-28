@@ -150,13 +150,13 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
   };
 
   const submitMovement = async (name, action, quantity, unitWeight = null) => {
-    if (!selectedStorage || (action === 'add' && !canAdd) || (action === 'remove' && !canEdit)) return;
+    if (!selectedStorage) return;
     const count = Number(quantity);
     if (!name.trim() || !Number.isInteger(count) || count < 1) {
       setNotice('Enter an item name and a whole-number quantity greater than zero.');
       return;
     }
-    if (action === 'add' && unitWeight !== null && (!Number.isFinite(Number(unitWeight)) || Number(unitWeight) < 0)) {
+    if (action === 'add' && unitWeight !== null && (!Number.isInteger(Number(unitWeight)) || Number(unitWeight) < 0)) {
       setNotice('Enter a valid per-item weight (zero or greater).');
       return;
     }
@@ -236,17 +236,17 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
           <section className="storage-inventory-panel">
             <div className="storage-panel-title"><h3><Package size={17}/> Items in storage</h3><button className="outline-btn" onClick={() => loadInventory(selectedStorage)}><RefreshCw size={13}/> Refresh</button></div>
             {!items.length ? <div className="crafting-empty">This storage is empty. Add the first item below.</div> : items.map(item => {
-              const row = rowActions[item.id] || { action: canEdit ? 'remove' : 'add', quantity: '1' };
+              const row = rowActions[item.id] || { action: 'remove', quantity: '1' };
               return <div className="storage-item-row" key={item.id}>
                 <div className="storage-item-info"><strong>{item.name}</strong><span>{item.quantity.toLocaleString()} in stock · {formatWeight(item.unit_weight)} weight each · {formatWeight(item.quantity * item.unit_weight)} total weight</span></div>
-                {(canAdd || canEdit) && <div className="storage-item-controls">
-                  <select aria-label={`Action for ${item.name}`} value={row.action} onChange={e => setRowActions(current => ({ ...current, [item.id]: { ...row, action: e.target.value } }))}><option value="remove" disabled={!canEdit}>Remove</option><option value="add" disabled={!canAdd}>Add</option></select>
+                <div className="storage-item-controls">
+                  <select aria-label={`Action for ${item.name}`} value={row.action} onChange={e => setRowActions(current => ({ ...current, [item.id]: { ...row, action: e.target.value } }))}><option value="remove">Remove</option><option value="add">Add</option></select>
                   <input aria-label={`Quantity for ${item.name}`} type="number" min="1" step="1" value={row.quantity} onChange={e => setRowActions(current => ({ ...current, [item.id]: { ...row, quantity: e.target.value } }))}/>
                   <button className="small-btn" disabled={itemBusy} onClick={() => submitMovement(item.name, row.action, row.quantity)}>{row.action === 'add' ? <Plus size={13}/> : <Minus size={13}/>} {row.action}</button>
-                </div>}
+                </div>
               </div>;
             })}
-            {canAdd && <form className="storage-add-form" onSubmit={e => { e.preventDefault(); submitMovement(itemDraft.name, 'add', itemDraft.quantity, itemDraft.unitWeight); }}>
+            <form className="storage-add-form" onSubmit={e => { e.preventDefault(); submitMovement(itemDraft.name, 'add', itemDraft.quantity, itemDraft.unitWeight); }}>
               <h4><Plus size={15}/> Add item</h4>
               <label>Item name<input required value={itemDraft.name} onChange={e => setItemDraft(current => ({ ...current, name: e.target.value }))} placeholder="e.g. Metal scraps"/></label>
               <div className="storage-add-fields">
@@ -255,7 +255,7 @@ export default function StoragesPanel({ isOwner, permissions = {}, accountType, 
               </div>
               <p className="storage-form-hint">If this item name already exists, its existing unit weight is kept and the quantity is combined.</p>
               <button className="primary" disabled={itemBusy}><Plus size={14}/>{itemBusy ? 'Saving...' : 'Add to storage'}</button>
-            </form>}
+            </form>
           </section>
           <section className="storage-history-panel">
             <div className="storage-panel-title"><h3><History size={17}/> Movement history</h3><span className="eyebrow">LATEST 100</span></div>
