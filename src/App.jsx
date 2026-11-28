@@ -73,6 +73,7 @@ function App() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [editing, setEditing] = useState(null);
+  const [movingPinId, setMovingPinId] = useState(null);
   const [draft, setDraft] = useState(blank);
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -483,6 +484,7 @@ function App() {
 
     setSelectedPosition(null);
     closeEditor();
+    setMovingPinId(null);
     setNotice('Pin saved successfully.');
     await loadPins();
   };
@@ -510,6 +512,7 @@ function App() {
         : p
       )
     );
+    setNotice(`Moved ${pin.title}.`);
 
     setNotice(`Moved "${pin.title}" and saved its new location.`);
   };
@@ -1077,12 +1080,13 @@ function App() {
                   key={p.id}
                   position={[p.y, p.x]}
                   icon={iconFor(categoryColor(p.category))}
-                  draggable={canEdit(p.category)}
+                  draggable={movingPinId === p.id && canEdit(p.category)}
                   eventHandlers={{
                     dragend: (e) => {
-                      if (!canEdit(p.category)) return;
+                      if (movingPinId !== p.id || !canEdit(p.category)) return;
                       const pos = e.target.getLatLng();
                       movePin(p, pos);
+                      setMovingPinId(null);
                     }
                   }}
                 >
@@ -1093,7 +1097,14 @@ function App() {
                       {p.image_url && <img src={p.image_url} alt=""/>}
                       <p>{p.description}</p>
                       {(canEdit(p.category) || canDelete(p.category)) && (
-                        <button onClick={() => editPin(p)}>Edit pin</button>
+                        <div className="popup-actions">
+                          {canEdit(p.category) && <button onClick={() => {
+                            setMovingPinId(p.id);
+                            setNotice(`Move mode enabled for ${p.title}. Drag this pin to its new position.`);
+                          }}>{movingPinId === p.id ? 'Move mode active' : 'Edit pin'}</button>}
+                          {canEdit(p.category) && <button onClick={() => editPin(p)}>Edit details</button>}
+                          {movingPinId === p.id && <button onClick={() => setMovingPinId(null)}>Cancel move</button>}
+                        </div>
                       )}
                     </div>
                   </Popup>
