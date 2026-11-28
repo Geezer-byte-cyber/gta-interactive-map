@@ -369,6 +369,7 @@ Deno.serve(async (req) => {
         can_add_recipes: canViewCrafting && requested.can_add_recipes === true,
         can_edit_recipes: canViewCrafting && requested.can_edit_recipes === true,
         can_delete_recipes: canViewCrafting && requested.can_delete_recipes === true,
+        can_view_hidden_recipes: canViewCrafting && requested.can_view_hidden_recipes === true,
       };
       const { error: moduleSaveError } = await admin
         .from("user_module_permissions")
