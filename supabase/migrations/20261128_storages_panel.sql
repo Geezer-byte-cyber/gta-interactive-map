@@ -121,22 +121,31 @@ USING (
   OR EXISTS (SELECT 1 FROM public.user_profiles p WHERE p.user_id = auth.uid() AND p.role = 'owner')
 );
 
+CREATE OR REPLACE FUNCTION public.storage_can_assign_self(storage_uuid UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.storages s
+    JOIN public.user_profiles p ON p.user_id = auth.uid()
+    JOIN public.user_module_permissions m ON m.user_id = auth.uid()
+    WHERE s.id = storage_uuid AND s.created_by = auth.uid()
+      AND p.account_type = 'knox'
+      AND p.role <> 'owner'
+      AND m.can_view_storages = TRUE AND m.can_add_storages = TRUE
+  );
+$;
+
 DROP POLICY IF EXISTS storage_user_access_insert ON public.storage_user_access;
 CREATE POLICY storage_user_access_insert ON public.storage_user_access
 FOR INSERT TO authenticated
 WITH CHECK (
   EXISTS (SELECT 1 FROM public.user_profiles p WHERE p.user_id = auth.uid() AND p.role = 'owner')
-  OR (
-    user_id = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.storages s
-      JOIN public.user_module_permissions m ON m.user_id = auth.uid()
-      JOIN public.user_profiles p ON p.user_id = auth.uid()
-      WHERE s.id = storage_id AND s.created_by = auth.uid()
-        AND p.account_type = 'knox'
-        AND m.can_view_storages = TRUE AND m.can_add_storages = TRUE
-    )
-  )
+  OR (user_id = auth.uid() AND public.storage_can_assign_self(storage_id))
 );
 
 DROP POLICY IF EXISTS storage_user_access_delete ON public.storage_user_access;
