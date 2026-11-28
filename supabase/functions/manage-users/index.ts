@@ -456,13 +456,20 @@ Deno.serve(async (req) => {
       if (catalogueCategoriesError) return fail("Could not validate catalogue categories", 500);
       const validCatalogueIds = new Set((catalogueCategories || []).map(c => c.id));
       const catalogueRows = [];
-      const requestedCatalogue = target && body.accountType === "customer" && Array.isArray(body.cataloguePermissions)
+      const requestedCatalogue = Array.isArray(body.cataloguePermissions)
         ? body.cataloguePermissions as Array<Record<string, unknown>>
         : [];
+      const isCustomerAccount = body.accountType === "customer";
       for (const item of requestedCatalogue) {
         const categoryId = String(item.categoryId || "");
         if (!validCatalogueIds.has(categoryId)) return fail("One of the selected catalogue categories is invalid");
-        if (item.canView === true) catalogueRows.push({ user_id: userId, category_id: categoryId, can_add: false, can_edit: false, can_delete: false });
+        const canView = isCustomerAccount && item.canView === true;
+        const canAdd = !isCustomerAccount && item.canAdd === true;
+        const canEdit = !isCustomerAccount && item.canEdit === true;
+        const canDelete = !isCustomerAccount && item.canDelete === true;
+        if (canView || canAdd || canEdit || canDelete) {
+          catalogueRows.push({ user_id: userId, category_id: categoryId, can_add: canAdd, can_edit: canEdit, can_delete: canDelete });
+        }
       }
       const { error: clearCatalogueError } = await admin.from("catalogue_category_permissions").delete().eq("user_id", userId);
       if (clearCatalogueError) return fail("Could not clear catalogue category permissions", 500);
