@@ -196,12 +196,20 @@ Deno.serve(async (req) => {
         return fail(profileError.message);
       }
 
+      const { error: moduleError } = await admin
+        .from("user_module_permissions")
+        .insert({ user_id: created.user.id });
+      if (moduleError) {
+        await admin.auth.admin.deleteUser(created.user.id);
+        return fail(moduleError.message);
+      }
+
       return respond({ success: true, userId: created.user.id });
     }
 
     // LIST USERS, CATEGORIES AND PERMISSIONS
     if (action === "list") {
-      const [profilesResult, categoriesResult, permissionsResult] =
+      const [profilesResult, categoriesResult, permissionsResult, moduleResult] =
         await Promise.all([
           admin
             .from("user_profiles")
@@ -214,6 +222,9 @@ Deno.serve(async (req) => {
           admin
             .from("user_category_permissions")
             .select("user_id, category_id, can_add, can_edit, can_delete"),
+          admin
+            .from("user_module_permissions")
+            .select("user_id, can_view_map, can_view_crafting, can_add_recipes, can_edit_recipes, can_delete_recipes"),
         ]);
 
       if (profilesResult.error) {
@@ -230,9 +241,16 @@ Deno.serve(async (req) => {
         console.error("Permissions query failed:", permissionsResult.error.message);
         return fail("Could not load permissions", 500);
       }
+      if (moduleResult.error) {
+        console.error("Module permissions query failed:", moduleResult.error.message);
+        return fail("Could not load section permissions", 500);
+      }
 
       const users = (profilesResult.data || []).map((profile) => ({
         ...profile,
+        moduleAccess: profile.role === "owner"
+          ? { can_view_map: true, can_view_crafting: true, can_add_recipes: true, can_edit_recipes: true, can_delete_recipes: true }
+          : ((moduleResult.data || []).find(item => item.user_id === profile.user_id) || { can_view_map: false, can_view_crafting: false, can_add_recipes: false, can_edit_recipes: false, can_delete_recipes: false }),
         permissions: (categoriesResult.data || []).map((category) => {
           const permission = (permissionsResult.data || []).find(
             (item) =>
@@ -338,6 +356,25 @@ Deno.serve(async (req) => {
         if (insertError) {
           return fail("Could not save permissions", 500);
         }
+      }
+
+      const requested = (body.moduleAccess && typeof body.moduleAccess === "object")
+        ? body.moduleAccess as Record<string, unknown>
+        : {};
+      const canViewCrafting = requested.can_view_crafting === true;
+      const moduleRow = {
+        user_id: userId,
+        can_view_map: requested.can_view_map === true,
+        can_view_crafting: canViewCrafting,
+        can_add_recipes: canViewCrafting && requested.can_add_recipes === true,
+        can_edit_recipes: canViewCrafting && requested.can_edit_recipes === true,
+        can_delete_recipes: canViewCrafting && requested.can_delete_recipes === true,
+      };
+      const { error: moduleSaveError } = await admin
+        .from("user_module_permissions")
+        .upsert(moduleRow, { onConflict: "user_id" });
+      if (moduleSaveError) {
+        return fail("Could not save section permissions", 500);
       }
 
       return respond({ success: true });
